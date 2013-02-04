@@ -1,26 +1,24 @@
 {
-  "name": "mcnet",
-  "description": "Bindings to the libmcnet Minecraft network protocol parser library",
-  "version": "0.0.1",
+  "name": "polarssl",
+  "description": "Bindings to the PolarSSL crypto library",
+  "version": "0.0.0",
   "author": {
     "name": "Conrad Pankoff",
     "email": "deoxxa@fknsrs.biz",
     "url": "http://www.fknsrs.biz/"
   },
-  "url": "http://github.com/deoxxa/node-mcnet",
+  "url": "http://github.com/deoxxa/node-polarssl",
   "license": "BSD",
-  "repository": { "type":"git", "url":"git://github.com/deoxxa/node-mcnet.git" },
+  "repository": { "type":"git", "url":"git://github.com/deoxxa/node-polarssl.git" },
   "keywords": [
-    "mcnet",
-    "minecraft",
-    "network",
-    "protocol",
-    "parser",
+    "polarssl",
+    "crypto",
+    "rsa",
     "native",
     "c"
   ],
-  "main": "./mcnet",
+  "main": "./polarssl",
   "scripts": {
-    "install": "cd deps/libmcnet; node-gyp clean configure build; cd ../..; node-gyp clean configure build"
+    "install": "node-gyp rebuild"
   }
 }
