@@ -2,7 +2,15 @@
 
 var polarssl = require("./polarssl");
 
-var key = polarssl.rsa_gen(1024);
+console.log("before generation call");
 
-console.log(key.public.toString("base64"));
-console.log(key.private.toString("base64"));
+polarssl.rsa_gen(1024, function(err, key) {
+  if (err) {
+    return console.log(err);
+  }
+
+  console.log(key.public.toString("base64"));
+  console.log(key.private.toString("base64"));
+});
+
+console.log("after generation call");

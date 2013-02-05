@@ -15,16 +15,33 @@ using namespace node;
 Handle<Value> rsa_gen(const Arguments& args) {
   HandleScope scope;
 
-  int key_len = 1024;
+  int key_length = 1024;
 
   /** check arguments */
 
-  if (args.Length() > 0) {
+  if (args.Length() < 1) {
+    ThrowException(Exception::TypeError(String::New("wrong number of arguments (should be >= 1)")));
+
+    return scope.Close(Undefined());
+  }
+
+  if (!args[args.Length() - 1]->IsFunction()) {
+    ThrowException(Exception::TypeError(String::New("last argument should be a function")));
+
+    return scope.Close(Undefined());
+  }
+
+  Local< Function > cb = Local< Function >::Cast(args[args.Length() - 1]);
+
+  if (args.Length() == 2) {
     if (!args[0]->IsNumber()) {
-      return scope.Close(Null());
+      const unsigned argc = 1;
+      Local< Value > argv[argc] = { Local< Value >::New(Exception::TypeError(String::New("first argument should be an integer"))) };
+      cb->Call(Context::GetCurrent()->Global(), argc, argv);
+      return scope.Close(Undefined());
     }
 
-    key_len = args[0]->NumberValue();
+    key_length = args[0]->NumberValue();
   }
 
   /** arguments sane (hopefully) */
@@ -45,7 +62,7 @@ Handle<Value> rsa_gen(const Arguments& args) {
 
   rsa_init(&rsa, RSA_PKCS_V15, 0);
 
-  if ((ret = rsa_gen_key(&rsa, ctr_drbg_random, &ctr_drbg, key_len, 65537)) != 0) {
+  if ((ret = rsa_gen_key(&rsa, ctr_drbg_random, &ctr_drbg, key_length, 65537)) != 0) {
     return scope.Close(Null());
   }
 
@@ -71,6 +88,10 @@ Handle<Value> rsa_gen(const Arguments& args) {
   object->Set(String::NewSymbol("public"), buffer_public->handle_);
 
   /** object representation done */
+
+  const unsigned argc = 2;
+  Local< Value > argv[argc] = { Local< Value >::New(Null()), Local< Value >::New(object) };
+  cb->Call(Context::GetCurrent()->Global(), argc, argv);
 
   return scope.Close(object);
 }
