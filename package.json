@@ -1,7 +1,7 @@
 {
   "name": "polarssl",
   "description": "Bindings to the PolarSSL crypto library",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": {
     "name": "Conrad Pankoff",
     "email": "deoxxa@fknsrs.biz",
