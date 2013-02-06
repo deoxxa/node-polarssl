@@ -4,7 +4,7 @@ var polarssl = require("./polarssl");
 
 console.log("before generation call");
 
-polarssl.rsa_gen(1024, function(err, key) {
+polarssl.rsa_gen(2048, function(err, key) {
   if (err) {
     return console.log(err);
   }
