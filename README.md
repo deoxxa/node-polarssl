@@ -9,17 +9,20 @@ Overview
 
 I want to make certs and stuff. PolarSSL is cool.
 
-Features
---------
+Functionality
+-------------
 
-RSA Key Generation
-------------------
+### rsa_gen
 
 ```js
-var key = polarssl.rsa_gen(1024);
+polarssl.rsa_gen(1024, function(err, key) {
+  if (err) {
+    return console.log(err);
+  }
 
-console.log(key.private.toString("base64"));
-console.log(key.public.toString("base64"));
+  console.log(key.private.toString("base64"));
+  console.log(key.public.toString("base64"));
+});
 ```
 
 License
