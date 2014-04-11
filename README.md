@@ -20,8 +20,8 @@ polarssl.rsa_gen(1024, function(err, key) {
     return console.log(err);
   }
 
-  console.log(key.private.toString("base64"));
-  console.log(key.public.toString("base64"));
+  console.log(key.private);
+  console.log(key.public);
 });
 ```
 
