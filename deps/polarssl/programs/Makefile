@@ -25,8 +25,11 @@ APPS =	aes/aescrypt2	aes/crypt_and_hash	\
 	hash/md5sum			hash/sha1sum		\
 	hash/sha2sum		pkey/dh_client		\
 	pkey/dh_genprime	pkey/dh_server		\
+	pkey/gen_key							\
 	pkey/key_app		pkey/key_app_writer	\
-	pkey/mpi_demo		pkey/rsa_genkey		\
+	pkey/mpi_demo		pkey/pk_decrypt		\
+	pkey/pk_encrypt		pkey/pk_sign		\
+	pkey/pk_verify		pkey/rsa_genkey		\
 	pkey/rsa_decrypt	pkey/rsa_encrypt	\
 	pkey/rsa_sign		pkey/rsa_verify		\
 	pkey/rsa_sign_pss	pkey/rsa_verify_pss \
@@ -38,12 +41,16 @@ APPS =	aes/aescrypt2	aes/crypt_and_hash	\
 	random/gen_random_ctr_drbg				\
 	test/ssl_cert_test	test/benchmark		\
 	test/selftest		test/ssl_test		\
-	util/strerror							\
+	util/pem2der		util/strerror		\
 	x509/cert_app		x509/crl_app		\
 	x509/cert_req
 
 ifdef OPENSSL
 APPS +=	test/o_p_test
+endif
+
+ifdef PTHREAD
+APPS +=	ssl/ssl_pthread_server
 endif
 
 .SILENT:
@@ -90,6 +97,14 @@ pkey/dh_server: pkey/dh_server.c ../library/libpolarssl.a
 	echo   "  CC    pkey/dh_server.c"
 	$(CC) $(CFLAGS) $(OFLAGS) pkey/dh_server.c   $(LDFLAGS) -o $@
 
+pkey/ecdsa: pkey/ecdsa.c ../library/libpolarssl.a
+	echo   "  CC    pkey/ecdsa.c"
+	$(CC) $(CFLAGS) $(OFLAGS) pkey/ecdsa.c       $(LDFLAGS) -o $@
+
+pkey/gen_key: pkey/gen_key.c ../library/libpolarssl.a
+	echo   "  CC    pkey/gen_key.c"
+	$(CC) $(CFLAGS) $(OFLAGS) pkey/gen_key.c   $(LDFLAGS) -o $@
+
 pkey/key_app: pkey/key_app.c ../library/libpolarssl.a
 	echo   "  CC    pkey/key_app.c"
 	$(CC) $(CFLAGS) $(OFLAGS) pkey/key_app.c   $(LDFLAGS) -o $@
@@ -101,6 +116,22 @@ pkey/key_app_writer: pkey/key_app_writer.c ../library/libpolarssl.a
 pkey/mpi_demo: pkey/mpi_demo.c ../library/libpolarssl.a
 	echo   "  CC    pkey/mpi_demo.c"
 	$(CC) $(CFLAGS) $(OFLAGS) pkey/mpi_demo.c    $(LDFLAGS) -o $@
+
+pkey/pk_decrypt: pkey/pk_decrypt.c ../library/libpolarssl.a
+	echo   "  CC    pkey/pk_decrypt.c"
+	$(CC) $(CFLAGS) $(OFLAGS) pkey/pk_decrypt.c    $(LDFLAGS) -o $@
+
+pkey/pk_encrypt: pkey/pk_encrypt.c ../library/libpolarssl.a
+	echo   "  CC    pkey/pk_encrypt.c"
+	$(CC) $(CFLAGS) $(OFLAGS) pkey/pk_encrypt.c    $(LDFLAGS) -o $@
+
+pkey/pk_sign: pkey/pk_sign.c ../library/libpolarssl.a
+	echo   "  CC    pkey/pk_sign.c"
+	$(CC) $(CFLAGS) $(OFLAGS) pkey/pk_sign.c    $(LDFLAGS) -o $@
+
+pkey/pk_verify: pkey/pk_verify.c ../library/libpolarssl.a
+	echo   "  CC    pkey/pk_verify.c"
+	$(CC) $(CFLAGS) $(OFLAGS) pkey/pk_verify.c  $(LDFLAGS) -o $@
 
 pkey/rsa_genkey: pkey/rsa_genkey.c ../library/libpolarssl.a
 	echo   "  CC    pkey/rsa_genkey.c"
@@ -162,6 +193,10 @@ ssl/ssl_fork_server: ssl/ssl_fork_server.c ../library/libpolarssl.a
 	echo   "  CC    ssl/ssl_fork_server.c"
 	$(CC) $(CFLAGS) $(OFLAGS) ssl/ssl_fork_server.c   $(LDFLAGS) -o $@
 
+ssl/ssl_pthread_server: ssl/ssl_pthread_server.c ../library/libpolarssl.a
+	echo   "  CC    ssl/ssl_pthread_server.c"
+	$(CC) $(CFLAGS) $(OFLAGS) ssl/ssl_pthread_server.c   $(LDFLAGS) -o $@ -lpthread
+
 ssl/ssl_mail_client: ssl/ssl_mail_client.c ../library/libpolarssl.a
 	echo   "  CC    ssl/ssl_mail_client.c"
 	$(CC) $(CFLAGS) $(OFLAGS) ssl/ssl_mail_client.c   $(LDFLAGS) -o $@
@@ -186,6 +221,10 @@ test/o_p_test: test/o_p_test.c ../library/libpolarssl.a
 	echo   "  CC    test/o_p_test.c"
 	$(CC) $(CFLAGS) $(OFLAGS) test/o_p_test.c    $(LDFLAGS) -o $@ -lssl -lcrypto
 
+util/pem2der: util/pem2der.c ../library/libpolarssl.a
+	echo   "  CC    util/pem2der.c"
+	$(CC) $(CFLAGS) $(OFLAGS) util/pem2der.c    $(LDFLAGS) -o $@
+
 util/strerror: util/strerror.c ../library/libpolarssl.a
 	echo   "  CC    util/strerror.c"
 	$(CC) $(CFLAGS) $(OFLAGS) util/strerror.c    $(LDFLAGS) -o $@
@@ -209,3 +248,6 @@ endif
 ifdef WINDOWS
 	del /S /Q /F *.o *.exe
 endif
+
+list:
+	echo $(APPS)

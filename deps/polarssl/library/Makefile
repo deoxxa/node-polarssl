@@ -22,9 +22,9 @@ ifdef SHARED
 CFLAGS += -fPIC
 endif
 
-SONAME=libpolarssl.so.0
+SONAME=libpolarssl.so.6
 
-DLEXT=so
+DLEXT=so.6
 # OSX shared library extension:
 # DLEXT=dylib
 
@@ -34,22 +34,34 @@ DLEXT=dll
 LDFLAGS += -lws2_32
 endif
 
-OBJS=	aes.o		arc4.o		asn1parse.o		\
+OBJS=	aes.o		aesni.o		arc4.o			\
+		asn1parse.o								\
 		asn1write.o base64.o	bignum.o		\
 		blowfish.o	camellia.o					\
 		certs.o		cipher.o	cipher_wrap.o	\
 		ctr_drbg.o	debug.o		des.o			\
-		dhm.o		entropy.o	entropy_poll.o	\
+		dhm.o		ecdh.o		ecdsa.o			\
+		ecp.o		ecp_curves.o				\
+		entropy.o	entropy_poll.o				\
 		error.o		gcm.o		havege.o		\
+		hmac_drbg.o								\
 		md.o		md_wrap.o	md2.o			\
-		md4.o		md5.o		net.o			\
+		md4.o		md5.o						\
+		memory_buffer_alloc.o	net.o			\
+		oid.o									\
 		padlock.o	pbkdf2.o	pem.o			\
-		pkcs11.o								\
-		rsa.o		sha1.o		sha2.o			\
-		sha4.o		ssl_cache.o	ssl_cli.o		\
-		ssl_srv.o								\
-		ssl_tls.o	timing.o	version.o		\
-		x509parse.o	x509write.o	xtea.o
+		pkcs5.o		pkcs11.o	pkcs12.o		\
+		pk.o		pk_wrap.o	pkparse.o		\
+		pkwrite.o	platform.o	ripemd160.o		\
+		rsa.o		sha1.o		sha256.o		\
+		sha512.o	ssl_cache.o	ssl_cli.o		\
+		ssl_srv.o   ssl_ciphersuites.o			\
+		ssl_tls.o	threading.o	timing.o		\
+		version.o								\
+		x509.o		x509_create.o				\
+		x509_crl.o	x509_crt.o	x509_csr.o		\
+		x509write_crt.o			x509write_csr.o	\
+		xtea.o
 
 .SILENT:
 
@@ -61,7 +73,7 @@ endif
 
 static: libpolarssl.a
 
-shared: libpolarssl.$(DLEXT)
+shared: libpolarssl.$(DLEXT) libpolarssl.so
 
 libpolarssl.a: $(OBJS)
 	echo "  AR    $@"
@@ -69,17 +81,21 @@ libpolarssl.a: $(OBJS)
 	echo "  RL    $@"
 	$(AR) s $@
 
-libpolarssl.so: libpolarssl.a
+libpolarssl.${DLEXT}: libpolarssl.a
 	echo "  LD    $@"
 	$(CC) ${LDFLAGS} -shared -Wl,-soname,$(SONAME) -o $@ $(OBJS)
+
+libpolarssl.so: libpolarssl.${DLEXT}
+	echo "  LN    $@ -> libpolarssl.${DLEXT}"
+	ln -sf libpolarssl.${DLEXT} $@
 
 libpolarssl.dylib: libpolarssl.a
 	echo "  LD    $@"
 	$(CC) ${LDFLAGS} -dynamiclib -o $@ $(OBJS)
 
-libpolarssl.dll: libpolarssl.a 
-	echo "  LD    $@" 
-	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJS) -lws2_32 -lwinmm -lgdi32 
+libpolarssl.dll: libpolarssl.a
+	echo "  LD    $@"
+	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJS) -lws2_32 -lwinmm -lgdi32
 
 .c.o:
 	echo "  CC    $<"

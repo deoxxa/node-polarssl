@@ -1,7 +1,7 @@
 /*
  *  Camellia implementation
  *
- *  Copyright (C) 2006-2010, Brainspark B.V.
+ *  Copyright (C) 2006-2014, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -34,6 +34,14 @@
 #if defined(POLARSSL_CAMELLIA_C)
 
 #include "polarssl/camellia.h"
+
+#if defined(POLARSSL_PLATFORM_C)
+#include "polarssl/platform.h"
+#else
+#define polarssl_printf printf
+#endif
+
+#if !defined(POLARSSL_CAMELLIA_ALT)
 
 /*
  * 32-bit integer manipulation macros (big endian)
@@ -521,6 +529,7 @@ int camellia_crypt_ecb( camellia_context *ctx,
     return( 0 );
 }
 
+#if defined(POLARSSL_CIPHER_MODE_CBC)
 /*
  * Camellia-CBC buffer encryption/decryption
  */
@@ -572,6 +581,7 @@ int camellia_crypt_cbc( camellia_context *ctx,
 
     return( 0 );
 }
+#endif /* POLARSSL_CIPHER_MODE_CBC */
 
 #if defined(POLARSSL_CIPHER_MODE_CFB)
 /*
@@ -656,6 +666,7 @@ int camellia_crypt_ctr( camellia_context *ctx,
     return( 0 );
 }
 #endif /* POLARSSL_CIPHER_MODE_CTR */
+#endif /* !POLARSSL_CAMELLIA_ALT */
 
 #if defined(POLARSSL_SELF_TEST)
 
@@ -729,6 +740,7 @@ static const unsigned char camellia_test_ecb_cipher[3][CAMELLIA_TESTS_ECB][16] =
     }
 };
 
+#if defined(POLARSSL_CIPHER_MODE_CBC)
 #define CAMELLIA_TESTS_CBC  3
 
 static const unsigned char camellia_test_cbc_key[3][32] =
@@ -790,6 +802,7 @@ static const unsigned char camellia_test_cbc_cipher[3][CAMELLIA_TESTS_CBC][16] =
           0x33, 0x30, 0xCD, 0xF1, 0xB1, 0x86, 0x0A, 0x83 }
     }
 };
+#endif /* POLARSSL_CIPHER_MODE_CBC */
 
 #if defined(POLARSSL_CIPHER_MODE_CTR)
 /*
@@ -864,7 +877,9 @@ int camellia_self_test( int verbose )
     unsigned char buf[64];
     unsigned char src[16];
     unsigned char dst[16];
+#if defined(POLARSSL_CIPHER_MODE_CBC)
     unsigned char iv[16];
+#endif
 #if defined(POLARSSL_CIPHER_MODE_CTR)
     size_t offset, len;
     unsigned char nonce_counter[16];
@@ -880,8 +895,8 @@ int camellia_self_test( int verbose )
     v = j & 1;
 
     if( verbose != 0 )
-        printf( "  CAMELLIA-ECB-%3d (%s): ", 128 + u * 64,
-                (v == CAMELLIA_DECRYPT) ? "dec" : "enc");
+        polarssl_printf( "  CAMELLIA-ECB-%3d (%s): ", 128 + u * 64,
+                         (v == CAMELLIA_DECRYPT) ? "dec" : "enc");
 
     for (i = 0; i < CAMELLIA_TESTS_ECB; i++ ) {
         memcpy( key, camellia_test_ecb_key[u][i], 16 + 8 * u);
@@ -901,19 +916,20 @@ int camellia_self_test( int verbose )
         if( memcmp( buf, dst, 16 ) != 0 )
         {
             if( verbose != 0 )
-                printf( "failed\n" );
+                polarssl_printf( "failed\n" );
 
             return( 1 );
         }
     }
 
     if( verbose != 0 )
-        printf( "passed\n" );
+        polarssl_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        printf( "\n" );
+        polarssl_printf( "\n" );
 
+#if defined(POLARSSL_CIPHER_MODE_CBC)
     /*
      * CBC mode
      */
@@ -923,8 +939,8 @@ int camellia_self_test( int verbose )
         v = j  & 1;
 
         if( verbose != 0 )
-            printf( "  CAMELLIA-CBC-%3d (%s): ", 128 + u * 64,
-                    ( v == CAMELLIA_DECRYPT ) ? "dec" : "enc" );
+            polarssl_printf( "  CAMELLIA-CBC-%3d (%s): ", 128 + u * 64,
+                             ( v == CAMELLIA_DECRYPT ) ? "dec" : "enc" );
 
     memcpy( src, camellia_test_cbc_iv, 16);
     memcpy( dst, camellia_test_cbc_iv, 16);
@@ -953,18 +969,19 @@ int camellia_self_test( int verbose )
         if( memcmp( buf, dst, 16 ) != 0 )
         {
             if( verbose != 0 )
-                printf( "failed\n" );
+                polarssl_printf( "failed\n" );
 
             return( 1 );
         }
     }
 
         if( verbose != 0 )
-            printf( "passed\n" );
+            polarssl_printf( "passed\n" );
     }
+#endif /* POLARSSL_CIPHER_MODE_CBC */
 
     if( verbose != 0 )
-        printf( "\n" );
+        polarssl_printf( "\n" );
 
 #if defined(POLARSSL_CIPHER_MODE_CTR)
     /*
@@ -976,8 +993,8 @@ int camellia_self_test( int verbose )
         v = i  & 1;
 
         if( verbose != 0 )
-            printf( "  CAMELLIA-CTR-128 (%s): ",
-                    ( v == CAMELLIA_DECRYPT ) ? "dec" : "enc" );
+            polarssl_printf( "  CAMELLIA-CTR-128 (%s): ",
+                             ( v == CAMELLIA_DECRYPT ) ? "dec" : "enc" );
 
         memcpy( nonce_counter, camellia_test_ctr_nonce_counter[u], 16 );
         memcpy( key, camellia_test_ctr_key[u], 16 );
@@ -995,7 +1012,7 @@ int camellia_self_test( int verbose )
             if( memcmp( buf, camellia_test_ctr_pt[u], len ) != 0 )
             {
                 if( verbose != 0 )
-                    printf( "failed\n" );
+                    polarssl_printf( "failed\n" );
 
                 return( 1 );
             }
@@ -1010,18 +1027,18 @@ int camellia_self_test( int verbose )
             if( memcmp( buf, camellia_test_ctr_ct[u], len ) != 0 )
             {
                 if( verbose != 0 )
-                    printf( "failed\n" );
+                    polarssl_printf( "failed\n" );
 
                 return( 1 );
             }
         }
 
         if( verbose != 0 )
-            printf( "passed\n" );
+            polarssl_printf( "passed\n" );
     }
 
     if( verbose != 0 )
-        printf( "\n" );
+        polarssl_printf( "\n" );
 #endif /* POLARSSL_CIPHER_MODE_CTR */
 
     return ( 0 );

@@ -23,129 +23,131 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _CRT_SECURE_NO_DEPRECATE
-#define _CRT_SECURE_NO_DEPRECATE 1
-#endif
+#include "polarssl/config.h"
 
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "polarssl/config.h"
-
+#include "polarssl/x509_csr.h"
+#include "polarssl/entropy.h"
+#include "polarssl/ctr_drbg.h"
 #include "polarssl/error.h"
-#include "polarssl/rsa.h"
-#include "polarssl/x509.h"
-#include "polarssl/base64.h"
-#include "polarssl/x509write.h"
+
+#if !defined(POLARSSL_X509_CSR_WRITE_C) || !defined(POLARSSL_FS_IO) ||  \
+    !defined(POLARSSL_PK_PARSE_C) ||                                    \
+    !defined(POLARSSL_ENTROPY_C) || !defined(POLARSSL_CTR_DRBG_C)
+int main( int argc, char *argv[] )
+{
+    ((void) argc);
+    ((void) argv);
+
+    printf( "POLARSSL_X509_CSR_WRITE_C and/or POLARSSL_FS_IO and/or "
+            "POLARSSL_PK_PARSE_C and/or "
+            "POLARSSL_ENTROPY_C and/or POLARSSL_CTR_DRBG_C "
+            "not defined.\n");
+    return( 0 );
+}
+#else
 
 #define DFL_FILENAME            "keyfile.key"
 #define DFL_DEBUG_LEVEL         0
 #define DFL_OUTPUT_FILENAME     "cert.req"
 #define DFL_SUBJECT_NAME        "CN=Cert,O=PolarSSL,C=NL"
+#define DFL_KEY_USAGE           0
+#define DFL_NS_CERT_TYPE        0
 
 /*
  * global options
  */
 struct options
 {
-    char *filename;             /* filename of the key file             */
+    const char *filename;       /* filename of the key file             */
     int debug_level;            /* level of debugging                   */
-    char *output_file;          /* where to store the constructed key file  */
-    char *subject_name;         /* subject name for certificate request */
+    const char *output_file;    /* where to store the constructed key file  */
+    const char *subject_name;   /* subject name for certificate request */
+    unsigned char key_usage;    /* key usage flags                      */
+    unsigned char ns_cert_type; /* NS cert type                         */
 } opt;
 
-void my_debug( void *ctx, int level, const char *str )
+int write_certificate_request( x509write_csr *req, const char *output_file,
+                               int (*f_rng)(void *, unsigned char *, size_t),
+                               void *p_rng )
 {
-    if( level < opt.debug_level )
-    {
-        fprintf( (FILE *) ctx, "%s", str );
-        fflush(  (FILE *) ctx  );
-    }
-}
-
-void write_certificate_request( rsa_context *rsa, x509_req_name *req_name,
-                                char *output_file )
-{
+    int ret;
     FILE *f;
     unsigned char output_buf[4096];
-    unsigned char base_buf[4096];
-    unsigned char *c;
-    int ret;
-    size_t len = 0, olen = 4096;
+    size_t len = 0;
 
-    memset(output_buf, 0, 4096);
-    ret = x509_write_cert_req( output_buf, 4096, rsa, req_name, SIG_RSA_SHA1 );
+    memset( output_buf, 0, 4096 );
+    if( ( ret = x509write_csr_pem( req, output_buf, 4096, f_rng, p_rng ) ) < 0 )
+        return( ret );
 
-    if( ret < 0 )
-        return;
+    len = strlen( (char *) output_buf );
 
-    len = ret;
-    c = output_buf + 4095 - len;
+    if( ( f = fopen( output_file, "w" ) ) == NULL )
+        return( -1 );
 
-    base64_encode( base_buf, &olen, c, len );
+    if( fwrite( output_buf, 1, len, f ) != len )
+        return( -1 );
 
-    c = base_buf;
-
-    f = fopen( output_file, "w" );
-    fprintf(f, "-----BEGIN CERTIFICATE REQUEST-----\n");
-    while (olen)
-    {
-        int use_len = olen;
-        if (use_len > 64) use_len = 64;
-        fwrite( c, 1, use_len, f );
-        olen -= use_len;
-        c += use_len;
-        fprintf(f, "\n");
-    }
-    fprintf(f, "-----END CERTIFICATE REQUEST-----\n");
     fclose(f);
+
+    return( 0 );
 }
 
 #define USAGE \
-    "\n usage: key_app param=<>...\n"                   \
+    "\n usage: cert_req param=<>...\n"                  \
     "\n acceptable parameters:\n"                       \
     "    filename=%%s         default: keyfile.key\n"   \
     "    debug_level=%%d      default: 0 (disabled)\n"  \
     "    output_file=%%s      default: cert.req\n"      \
     "    subject_name=%%s     default: CN=Cert,O=PolarSSL,C=NL\n"   \
+    "    key_usage=%%s        default: (empty)\n"       \
+    "                        Comma-separated-list of values:\n"     \
+    "                          digital_signature\n"     \
+    "                          non_repudiation\n"       \
+    "                          key_encipherment\n"      \
+    "                          data_encipherment\n"     \
+    "                          key_agreement\n"         \
+    "                          key_certificate_sign\n"  \
+    "                          crl_sign\n"              \
+    "    ns_cert_type=%%s     default: (empty)\n"       \
+    "                        Comma-separated-list of values:\n"     \
+    "                          ssl_client\n"            \
+    "                          ssl_server\n"            \
+    "                          email\n"                 \
+    "                          object_signing\n"        \
+    "                          ssl_ca\n"                \
+    "                          email_ca\n"              \
+    "                          object_signing_ca\n"     \
     "\n"
 
-#if !defined(POLARSSL_BIGNUM_C) || !defined(POLARSSL_RSA_C) ||         \
-    !defined(POLARSSL_X509_PARSE_C) || !defined(POLARSSL_FS_IO)
-int main( int argc, char *argv[] )
-{
-    ((void) argc);
-    ((void) argv);
-
-    printf("POLARSSL_BIGNUM_C and/or POLARSSL_RSA_C and/or "
-           "POLARSSL_X509_PARSE_C and/or POLARSSL_FS_IO not defined.\n");
-    return( 0 );
-}
-#else
 int main( int argc, char *argv[] )
 {
     int ret = 0;
-    rsa_context rsa;
+    pk_context key;
     char buf[1024];
-    int i, j, n;
-    char *p, *q;
-    char *s, *c, *end;
-    int in_tag;
-    char *oid = NULL;
-    x509_req_name *req_name = NULL;
-    x509_req_name *cur = req_name;
+    int i;
+    char *p, *q, *r;
+    x509write_csr req;
+    entropy_context entropy;
+    ctr_drbg_context ctr_drbg;
+    const char *pers = "csr example app";
 
     /*
      * Set to sane values
      */
-    memset( &rsa, 0, sizeof( rsa_context ) );
-    memset( buf, 0, 1024 );
+    x509write_csr_init( &req );
+    x509write_csr_set_md_alg( &req, POLARSSL_MD_SHA1 );
+    pk_init( &key );
+    memset( buf, 0, sizeof( buf ) );
 
     if( argc == 0 )
     {
     usage:
         printf( USAGE );
+        ret = 1;
         goto exit;
     }
 
@@ -153,6 +155,8 @@ int main( int argc, char *argv[] )
     opt.debug_level         = DFL_DEBUG_LEVEL;
     opt.output_file         = DFL_OUTPUT_FILENAME;
     opt.subject_name        = DFL_SUBJECT_NAME;
+    opt.key_usage           = DFL_KEY_USAGE;
+    opt.ns_cert_type        = DFL_NS_CERT_TYPE;
 
     for( i = 1; i < argc; i++ )
     {
@@ -161,13 +165,6 @@ int main( int argc, char *argv[] )
         if( ( q = strchr( p, '=' ) ) == NULL )
             goto usage;
         *q++ = '\0';
-
-        n = strlen( p );
-        for( j = 0; j < n; j++ )
-        {
-            if( argv[i][j] >= 'A' && argv[i][j] <= 'Z' )
-                argv[i][j] |= 0x20;
-        }
 
         if( strcmp( p, "filename" ) == 0 )
             opt.filename = q;
@@ -183,108 +180,149 @@ int main( int argc, char *argv[] )
         {
             opt.subject_name = q;
         }
+        else if( strcmp( p, "key_usage" ) == 0 )
+        {
+            while( q != NULL )
+            {
+                if( ( r = strchr( q, ',' ) ) != NULL )
+                    *r++ = '\0';
+
+                if( strcmp( q, "digital_signature" ) == 0 )
+                    opt.key_usage |= KU_DIGITAL_SIGNATURE;
+                else if( strcmp( q, "non_repudiation" ) == 0 )
+                    opt.key_usage |= KU_NON_REPUDIATION;
+                else if( strcmp( q, "key_encipherment" ) == 0 )
+                    opt.key_usage |= KU_KEY_ENCIPHERMENT;
+                else if( strcmp( q, "data_encipherment" ) == 0 )
+                    opt.key_usage |= KU_DATA_ENCIPHERMENT;
+                else if( strcmp( q, "key_agreement" ) == 0 )
+                    opt.key_usage |= KU_KEY_AGREEMENT;
+                else if( strcmp( q, "key_cert_sign" ) == 0 )
+                    opt.key_usage |= KU_KEY_CERT_SIGN;
+                else if( strcmp( q, "crl_sign" ) == 0 )
+                    opt.key_usage |= KU_CRL_SIGN;
+                else
+                    goto usage;
+
+                q = r;
+            }
+        }
+        else if( strcmp( p, "ns_cert_type" ) == 0 )
+        {
+            while( q != NULL )
+            {
+                if( ( r = strchr( q, ',' ) ) != NULL )
+                    *r++ = '\0';
+
+                if( strcmp( q, "ssl_client" ) == 0 )
+                    opt.ns_cert_type |= NS_CERT_TYPE_SSL_CLIENT;
+                else if( strcmp( q, "ssl_server" ) == 0 )
+                    opt.ns_cert_type |= NS_CERT_TYPE_SSL_SERVER;
+                else if( strcmp( q, "email" ) == 0 )
+                    opt.ns_cert_type |= NS_CERT_TYPE_EMAIL;
+                else if( strcmp( q, "object_signing" ) == 0 )
+                    opt.ns_cert_type |= NS_CERT_TYPE_OBJECT_SIGNING;
+                else if( strcmp( q, "ssl_ca" ) == 0 )
+                    opt.ns_cert_type |= NS_CERT_TYPE_SSL_CA;
+                else if( strcmp( q, "email_ca" ) == 0 )
+                    opt.ns_cert_type |= NS_CERT_TYPE_EMAIL_CA;
+                else if( strcmp( q, "object_signing_ca" ) == 0 )
+                    opt.ns_cert_type |= NS_CERT_TYPE_OBJECT_SIGNING_CA;
+                else
+                    goto usage;
+
+                q = r;
+            }
+        }
         else
             goto usage;
     }
 
-    /*
-     * 1.0. Check the subject name for validity
-     */
-    s = opt.subject_name;
-    end = s + strlen( s );
+    if( opt.key_usage )
+        x509write_csr_set_key_usage( &req, opt.key_usage );
 
-    c = s;
-
-    in_tag = 1;
-    while( c <= end )
-    {
-        if( in_tag && *c == '=' )
-        {
-            if( memcmp( s, "CN", 2 ) == 0 && c - s == 2 )
-                oid = OID_CN;
-            else if( memcmp( s, "C", 1 ) == 0 && c - s == 1 )
-                oid = OID_COUNTRY;
-            else if( memcmp( s, "O", 1 ) == 0 && c - s == 1 )
-                oid = OID_ORGANIZATION;
-            else if( memcmp( s, "L", 1 ) == 0 && c - s == 1 )
-                oid = OID_LOCALITY;
-            else if( memcmp( s, "R", 1 ) == 0 && c - s == 1 )
-                oid = OID_PKCS9_EMAIL;
-            else if( memcmp( s, "OU", 2 ) == 0 && c - s == 2 )
-                oid = OID_ORG_UNIT;
-            else if( memcmp( s, "ST", 2 ) == 0 && c - s == 2 )
-                oid = OID_STATE;
-            else
-            {
-                printf("Failed to parse subject name.\n");
-                goto exit;
-            }
-
-            s = c + 1;
-            in_tag = 0;
-        }
-        
-        if( !in_tag && ( *c == ',' || c == end ) )
-        {
-            if( c - s > 127 )
-            {
-                printf("Name too large for buffer.\n");
-                goto exit;
-            }
-
-            if( cur == NULL )
-            {
-                req_name = malloc( sizeof(x509_req_name) );
-                cur = req_name;
-            }
-            else
-            {
-                cur->next = malloc( sizeof(x509_req_name) );
-                cur = cur->next;
-            }
-
-            if( cur == NULL )
-            {
-                printf( "Failed to allocate memory.\n" );
-                goto exit;
-            }
-
-            memset( cur, 0, sizeof(x509_req_name) );
-
-            strncpy( cur->oid, oid, strlen( oid ) );
-            strncpy( cur->name, s, c - s );
-
-            s = c + 1;
-            in_tag = 1;
-        }
-        c++;
-    }
+    if( opt.ns_cert_type )
+        x509write_csr_set_ns_cert_type( &req, opt.ns_cert_type );
 
     /*
-     * 1.1. Load the key
+     * 0. Seed the PRNG
      */
-    printf( "\n  . Loading the private key ..." );
+    printf( "  . Seeding the random number generator..." );
     fflush( stdout );
 
-    ret = x509parse_keyfile( &rsa, opt.filename, NULL );
-
-    if( ret != 0 )
+    entropy_init( &entropy );
+    if( ( ret = ctr_drbg_init( &ctr_drbg, entropy_func, &entropy,
+                               (const unsigned char *) pers,
+                               strlen( pers ) ) ) != 0 )
     {
-#ifdef POLARSSL_ERROR_C
-        error_strerror( ret, buf, 1024 );
-#endif
-        printf( " failed\n  !  x509parse_key returned %d - %s\n\n", ret, buf );
-        rsa_free( &rsa );
+        printf( " failed\n  !  ctr_drbg_init returned %d", ret );
         goto exit;
     }
 
     printf( " ok\n" );
 
-    write_certificate_request( &rsa, req_name, opt.output_file );
+    /*
+     * 1.0. Check the subject name for validity
+     */
+    printf( "  . Checking subjet name..." );
+    fflush( stdout );
+
+    if( ( ret = x509write_csr_set_subject_name( &req, opt.subject_name ) ) != 0 )
+    {
+        printf( " failed\n  !  x509write_csr_set_subject_name returned %d", ret );
+        goto exit;
+    }
+
+    printf( " ok\n" );
+
+    /*
+     * 1.1. Load the key
+     */
+    printf( "  . Loading the private key ..." );
+    fflush( stdout );
+
+    ret = pk_parse_keyfile( &key, opt.filename, NULL );
+
+    if( ret != 0 )
+    {
+        printf( " failed\n  !  pk_parse_keyfile returned %d", ret );
+        goto exit;
+    }
+
+    x509write_csr_set_key( &req, &key );
+
+    printf( " ok\n" );
+
+    /*
+     * 1.2. Writing the request
+     */
+    printf( "  . Writing the certificate request ..." );
+    fflush( stdout );
+
+    if( ( ret = write_certificate_request( &req, opt.output_file,
+                                           ctr_drbg_random, &ctr_drbg ) ) != 0 )
+    {
+        printf( " failed\n  !  write_certifcate_request %d", ret );
+        goto exit;
+    }
+
+    printf( " ok\n" );
 
 exit:
 
-    rsa_free( &rsa );
+    if( ret != 0 && ret != 1)
+    {
+#ifdef POLARSSL_ERROR_C
+        polarssl_strerror( ret, buf, sizeof( buf ) );
+        printf( " - %s\n", buf );
+#else
+        printf("\n");
+#endif
+    }
+
+    x509write_csr_free( &req );
+    pk_free( &key );
+    entropy_free( &entropy );
 
 #if defined(_WIN32)
     printf( "  + Press Enter to exit this program.\n" );
@@ -293,5 +331,5 @@ exit:
 
     return( ret );
 }
-#endif /* POLARSSL_BIGNUM_C && POLARSSL_RSA_C &&
-          POLARSSL_X509_PARSE_C && POLARSSL_FS_IO */
+#endif /* POLARSSL_X509_CSR_WRITE_C && POLARSSL_PK_PARSE_C && POLARSSL_FS_IO &&
+          POLARSSL_ENTROPY_C && POLARSSL_CTR_DRBG_C */

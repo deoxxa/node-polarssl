@@ -23,14 +23,10 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _CRT_SECURE_NO_DEPRECATE
-#define _CRT_SECURE_NO_DEPRECATE 1
-#endif
+#include "polarssl/config.h"
 
 #include <string.h>
 #include <stdio.h>
-
-#include "polarssl/config.h"
 
 #include "polarssl/md.h"
 
@@ -81,6 +77,7 @@ static int generic_check( const md_info_t *md_info, char *filename )
     int nb_tot1, nb_tot2;
     unsigned char sum[POLARSSL_MD_MAX_SIZE];
     char buf[POLARSSL_MD_MAX_SIZE * 2 + 1], line[1024];
+    char diff;
 
     if( ( f = fopen( filename, "rb" ) ) == NULL )
     {
@@ -127,7 +124,12 @@ static int generic_check( const md_info_t *md_info, char *filename )
         for( i = 0; i < md_info->size; i++ )
             sprintf( buf + i * 2, "%02x", sum[i] );
 
-        if( memcmp( line, buf, 2 * md_info->size ) != 0 )
+        /* Use constant-time buffer comparison */
+        diff = 0;
+        for( i = 0; i < 2 * md_info->size; i++ )
+            diff |= line[i] ^ buf[i];
+
+        if( diff != 0 )
         {
             nb_err2++;
             fprintf( stderr, "wrong checksum: %s\n", line + 66 );
@@ -147,6 +149,8 @@ static int generic_check( const md_info_t *md_info, char *filename )
         printf( "WARNING: %d (out of %d) computed checksums did "
                 "not match\n", nb_err2, nb_tot2 );
     }
+
+    fclose( f );
 
     return( nb_err1 != 0 || nb_err2 != 0 );
 }

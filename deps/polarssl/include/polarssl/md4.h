@@ -3,7 +3,7 @@
  *
  * \brief MD4 message digest algorithm (hash function)
  *
- *  Copyright (C) 2006-2010, Brainspark B.V.
+ *  Copyright (C) 2006-2013, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -27,9 +27,11 @@
 #ifndef POLARSSL_MD4_H
 #define POLARSSL_MD4_H
 
+#include "config.h"
+
 #include <string.h>
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(EFIX64) && !defined(EFI32)
 #include <basetsd.h>
 typedef UINT32 uint32_t;
 #else
@@ -37,6 +39,14 @@ typedef UINT32 uint32_t;
 #endif
 
 #define POLARSSL_ERR_MD4_FILE_IO_ERROR                 -0x0072  /**< Read/write error in file. */
+
+#if !defined(POLARSSL_MD4_ALT)
+// Regular implementation
+//
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * \brief          MD4 context structure
@@ -51,10 +61,6 @@ typedef struct
     unsigned char opad[64];     /*!< HMAC: outer padding        */
 }
 md4_context;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * \brief          MD4 context setup
@@ -79,6 +85,18 @@ void md4_update( md4_context *ctx, const unsigned char *input, size_t ilen );
  * \param output   MD4 checksum result
  */
 void md4_finish( md4_context *ctx, unsigned char output[16] );
+
+#ifdef __cplusplus
+}
+#endif
+
+#else  /* POLARSSL_MD4_ALT */
+#include "md4_alt.h"
+#endif /* POLARSSL_MD4_ALT */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * \brief          Output = MD4( input buffer )
@@ -151,6 +169,9 @@ void md4_hmac( const unsigned char *key, size_t keylen,
  * \return         0 if successful, or 1 if the test failed
  */
 int md4_self_test( int verbose );
+
+/* Internal use */
+void md4_process( md4_context *ctx, const unsigned char data[64] );
 
 #ifdef __cplusplus
 }

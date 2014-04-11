@@ -1,7 +1,7 @@
 /*
  *  Blowfish implementation
  *
- *  Copyright (C) 2012-2012, Brainspark B.V.
+ *  Copyright (C) 2012-2013, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -34,6 +34,8 @@
 #if defined(POLARSSL_BLOWFISH_C)
 
 #include "polarssl/blowfish.h"
+
+#if !defined(POLARSSL_BLOWFISH_ALT)
 
 /*
  * 32-bit integer manipulation macros (big endian)
@@ -231,6 +233,7 @@ int blowfish_crypt_ecb( blowfish_context *ctx,
     return( 0 );
 }
 
+#if defined(POLARSSL_CIPHER_MODE_CBC)
 /*
  * Blowfish-CBC buffer encryption/decryption
  */
@@ -282,6 +285,7 @@ int blowfish_crypt_cbc( blowfish_context *ctx,
 
     return( 0 );
 }
+#endif /* POLARSSL_CIPHER_MODE_CBC */
 
 #if defined(POLARSSL_CIPHER_MODE_CFB)
 /*
@@ -626,4 +630,5 @@ static const uint32_t S[4][256] = {
         0xB74E6132L, 0xCE77E25BL, 0x578FDFE3L, 0x3AC372E6L  }
 };
 
+#endif /* !POLARSSL_BLOWFISH_ALT */
 #endif /* POLARSSL_BLOWFISH_C */

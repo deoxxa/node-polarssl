@@ -1,7 +1,7 @@
 /*
  *  SSL client demonstration program
  *
- *  Copyright (C) 2006-2011, Brainspark B.V.
+ *  Copyright (C) 2006-2013, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -23,14 +23,10 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _CRT_SECURE_NO_DEPRECATE
-#define _CRT_SECURE_NO_DEPRECATE 1
-#endif
+#include "polarssl/config.h"
 
 #include <string.h>
 #include <stdio.h>
-
-#include "polarssl/config.h"
 
 #include "polarssl/net.h"
 #include "polarssl/ssl.h"
@@ -39,25 +35,10 @@
 #include "polarssl/error.h"
 #include "polarssl/certs.h"
 
-#define SERVER_PORT 4433
-#define SERVER_NAME "localhost"
-#define GET_REQUEST "GET / HTTP/1.0\r\n\r\n"
-
-#define DEBUG_LEVEL 1
-
-void my_debug( void *ctx, int level, const char *str )
-{
-    if( level < DEBUG_LEVEL )
-    {
-        fprintf( (FILE *) ctx, "%s", str );
-        fflush(  (FILE *) ctx  );
-    }
-}
-
 #if !defined(POLARSSL_BIGNUM_C) || !defined(POLARSSL_ENTROPY_C) ||  \
     !defined(POLARSSL_SSL_TLS_C) || !defined(POLARSSL_SSL_CLI_C) || \
     !defined(POLARSSL_NET_C) || !defined(POLARSSL_RSA_C) ||         \
-    !defined(POLARSSL_CTR_DRBG_C)
+    !defined(POLARSSL_CTR_DRBG_C) || !defined(POLARSSL_X509_CRT_PARSE_C)
 int main( int argc, char *argv[] )
 {
     ((void) argc);
@@ -66,20 +47,37 @@ int main( int argc, char *argv[] )
     printf("POLARSSL_BIGNUM_C and/or POLARSSL_ENTROPY_C and/or "
            "POLARSSL_SSL_TLS_C and/or POLARSSL_SSL_CLI_C and/or "
            "POLARSSL_NET_C and/or POLARSSL_RSA_C and/or "
-           "POLARSSL_CTR_DRBG_C not defined.\n");
+           "POLARSSL_CTR_DRBG_C and/or POLARSSL_X509_CRT_PARSE_C "
+           "not defined.\n");
     return( 0 );
 }
 #else
+
+#define SERVER_PORT 4433
+#define SERVER_NAME "localhost"
+#define GET_REQUEST "GET / HTTP/1.0\r\n\r\n"
+
+#define DEBUG_LEVEL 1
+
+static void my_debug( void *ctx, int level, const char *str )
+{
+    if( level < DEBUG_LEVEL )
+    {
+        fprintf( (FILE *) ctx, "%s", str );
+        fflush(  (FILE *) ctx  );
+    }
+}
+
 int main( int argc, char *argv[] )
 {
-    int ret, len, server_fd;
+    int ret, len, server_fd = -1;
     unsigned char buf[1024];
-    char *pers = "ssl_client1";
+    const char *pers = "ssl_client1";
 
     entropy_context entropy;
     ctr_drbg_context ctr_drbg;
     ssl_context ssl;
-    x509_cert cacert;
+    x509_crt cacert;
 
     ((void) argc);
     ((void) argv);
@@ -88,14 +86,15 @@ int main( int argc, char *argv[] )
      * 0. Initialize the RNG and the session data
      */
     memset( &ssl, 0, sizeof( ssl_context ) );
-    memset( &cacert, 0, sizeof( x509_cert ) );
+    x509_crt_init( &cacert );
 
     printf( "\n  . Seeding the random number generator..." );
     fflush( stdout );
 
     entropy_init( &entropy );
     if( ( ret = ctr_drbg_init( &ctr_drbg, entropy_func, &entropy,
-                               (unsigned char *) pers, strlen( pers ) ) ) != 0 )
+                               (const unsigned char *) pers,
+                               strlen( pers ) ) ) != 0 )
     {
         printf( " failed\n  ! ctr_drbg_init returned %d\n", ret );
         goto exit;
@@ -110,8 +109,8 @@ int main( int argc, char *argv[] )
     fflush( stdout );
 
 #if defined(POLARSSL_CERTS_C)
-    ret = x509parse_crt( &cacert, (unsigned char *) test_ca_crt,
-                         strlen( test_ca_crt ) );
+    ret = x509_crt_parse( &cacert, (const unsigned char *) test_ca_list,
+                          strlen( test_ca_list ) );
 #else
     ret = 1;
     printf("POLARSSL_CERTS_C not defined.");
@@ -119,7 +118,7 @@ int main( int argc, char *argv[] )
 
     if( ret < 0 )
     {
-        printf( " failed\n  !  x509parse_crt returned -0x%x\n\n", -ret );
+        printf( " failed\n  !  x509_crt_parse returned -0x%x\n\n", -ret );
         goto exit;
     }
 
@@ -156,6 +155,8 @@ int main( int argc, char *argv[] )
     printf( " ok\n" );
 
     ssl_set_endpoint( &ssl, SSL_IS_CLIENT );
+    /* OPTIONAL is not optimal for security,
+     * but makes interop easier in this simplified example */
     ssl_set_authmode( &ssl, SSL_VERIFY_OPTIONAL );
     ssl_set_ca_chain( &ssl, &cacert, NULL, "PolarSSL Server 1" );
 
@@ -186,6 +187,7 @@ int main( int argc, char *argv[] )
      */
     printf( "  . Verifying peer X.509 certificate..." );
 
+    /* In real life, we may want to bail out when ret != 0 */
     if( ( ret = ssl_get_verify_result( &ssl ) ) != 0 )
     {
         printf( " failed\n" );
@@ -270,14 +272,15 @@ exit:
     if( ret != 0 )
     {
         char error_buf[100];
-        error_strerror( ret, error_buf, 100 );
+        polarssl_strerror( ret, error_buf, 100 );
         printf("Last error was: %d - %s\n\n", ret, error_buf );
     }
 #endif
 
-    x509_free( &cacert );
+    x509_crt_free( &cacert );
     net_close( server_fd );
     ssl_free( &ssl );
+    entropy_free( &entropy );
 
     memset( &ssl, 0, sizeof( ssl ) );
 

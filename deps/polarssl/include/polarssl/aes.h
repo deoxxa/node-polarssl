@@ -3,7 +3,7 @@
  *
  * \brief AES block cipher
  *
- *  Copyright (C) 2006-2010, Brainspark B.V.
+ *  Copyright (C) 2006-2013, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -27,23 +27,39 @@
 #ifndef POLARSSL_AES_H
 #define POLARSSL_AES_H
 
+#include "config.h"
+
 #include <string.h>
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(EFIX64) && !defined(EFI32)
 #include <basetsd.h>
 typedef UINT32 uint32_t;
 #else
 #include <inttypes.h>
 #endif
 
+/* padlock.c and aesni.c rely on these values! */
 #define AES_ENCRYPT     1
 #define AES_DECRYPT     0
 
 #define POLARSSL_ERR_AES_INVALID_KEY_LENGTH                -0x0020  /**< Invalid key length. */
 #define POLARSSL_ERR_AES_INVALID_INPUT_LENGTH              -0x0022  /**< Invalid data input length. */
 
+#if !defined(POLARSSL_AES_ALT)
+// Regular implementation
+//
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * \brief          AES context structure
+ *
+ * \note           buf is able to hold 32 extra bytes, which can be used:
+ *                 - for alignment purposes if VIA padlock is used, and/or
+ *                 - to simplify key expansion in the 256-bit case by
+ *                 generating an extra round key
  */
 typedef struct
 {
@@ -52,10 +68,6 @@ typedef struct
     uint32_t buf[68];           /*!<  unaligned data    */
 }
 aes_context;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * \brief          AES key schedule (encryption)
@@ -94,6 +106,7 @@ int aes_crypt_ecb( aes_context *ctx,
                     const unsigned char input[16],
                     unsigned char output[16] );
 
+#if defined(POLARSSL_CIPHER_MODE_CBC)
 /**
  * \brief          AES-CBC buffer encryption/decryption
  *                 Length should be a multiple of the block
@@ -114,7 +127,9 @@ int aes_crypt_cbc( aes_context *ctx,
                     unsigned char iv[16],
                     const unsigned char *input,
                     unsigned char *output );
+#endif /* POLARSSL_CIPHER_MODE_CBC */
 
+#if defined(POLARSSL_CIPHER_MODE_CFB)
 /**
  * \brief          AES-CFB128 buffer encryption/decryption.
  *
@@ -122,7 +137,6 @@ int aes_crypt_cbc( aes_context *ctx,
  * both encryption and decryption. So a context initialized with
  * aes_setkey_enc() for both AES_ENCRYPT and AES_DECRYPT.
  *
- * both 
  * \param ctx      AES context
  * \param mode     AES_ENCRYPT or AES_DECRYPT
  * \param length   length of the input data
@@ -142,6 +156,31 @@ int aes_crypt_cfb128( aes_context *ctx,
                        unsigned char *output );
 
 /**
+ * \brief          AES-CFB8 buffer encryption/decryption.
+ *
+ * Note: Due to the nature of CFB you should use the same key schedule for
+ * both encryption and decryption. So a context initialized with
+ * aes_setkey_enc() for both AES_ENCRYPT and AES_DECRYPT.
+ *
+ * \param ctx      AES context
+ * \param mode     AES_ENCRYPT or AES_DECRYPT
+ * \param length   length of the input data
+ * \param iv       initialization vector (updated after use)
+ * \param input    buffer holding the input data
+ * \param output   buffer holding the output data
+ *
+ * \return         0 if successful
+ */
+int aes_crypt_cfb8( aes_context *ctx,
+                    int mode,
+                    size_t length,
+                    unsigned char iv[16],
+                    const unsigned char *input,
+                    unsigned char *output );
+#endif /*POLARSSL_CIPHER_MODE_CFB */
+
+#if defined(POLARSSL_CIPHER_MODE_CTR)
+/**
  * \brief               AES-CTR buffer encryption/decryption
  *
  * Warning: You have to keep the maximum use of your counter in mind!
@@ -150,6 +189,7 @@ int aes_crypt_cfb128( aes_context *ctx,
  * both encryption and decryption. So a context initialized with
  * aes_setkey_enc() for both AES_ENCRYPT and AES_DECRYPT.
  *
+ * \param ctx           AES context
  * \param length        The length of the data
  * \param nc_off        The offset in the current stream_block (for resuming
  *                      within current cipher stream). The offset pointer to
@@ -169,6 +209,20 @@ int aes_crypt_ctr( aes_context *ctx,
                        unsigned char stream_block[16],
                        const unsigned char *input,
                        unsigned char *output );
+#endif /* POLARSSL_CIPHER_MODE_CTR */
+
+#ifdef __cplusplus
+}
+#endif
+
+#else  /* POLARSSL_AES_ALT */
+#include "aes_alt.h"
+#endif /* POLARSSL_AES_ALT */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * \brief          Checkup routine
  *

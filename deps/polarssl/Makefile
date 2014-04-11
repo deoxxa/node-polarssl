@@ -48,9 +48,31 @@ clean:
 	cd library  && $(MAKE) clean && cd ..
 	cd programs && $(MAKE) clean && cd ..
 	cd tests    && $(MAKE) clean && cd ..
+	find . \( -name \*.gcno -o -name \*.gcda -o -name *.info \) -exec rm {} +
 
-check:
-	( cd tests && $(MAKE) check )
+check: lib
+	( cd tests && $(MAKE) && $(MAKE) check )
+
+test-ref-configs:
+	tests/scripts/test-ref-configs.pl
+
+# note: for coverage testing, build with:
+# CFLAGS='--coverage' make OFLAGS='-g3 -O0'
+covtest:
+	make check
+	# add programs/test/selftest even though the selftest functions are
+	# called from the testsuites since it runs them in verbose mode,
+	# avoiding spurious "uncovered" printf lines
+	programs/test/selftest
+	( cd tests && ./compat.sh )
+	( cd tests && ./ssl-opt.sh )
+
+lcov:
+	rm -rf Coverage
+	lcov --capture --directory library -o polarssl.info
+	gendesc tests/Descriptions.txt -o descriptions
+	genhtml --title PolarSSL --description-file descriptions --keep-descriptions --legend --no-branch-coverage -o Coverage polarssl.info
+	rm -f polarssl.info descriptions
 
 apidoc:
 	mkdir -p apidoc

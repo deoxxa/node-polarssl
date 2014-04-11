@@ -23,14 +23,10 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _CRT_SECURE_NO_DEPRECATE
-#define _CRT_SECURE_NO_DEPRECATE 1
-#endif
+#include "polarssl/config.h"
 
 #include <string.h>
 #include <stdio.h>
-
-#include "polarssl/config.h"
 
 #include "polarssl/net.h"
 #include "polarssl/aes.h"
@@ -70,7 +66,7 @@ int main( int argc, char *argv[] )
     unsigned char *p, *end;
     unsigned char buf[2048];
     unsigned char hash[20];
-    char *pers = "dh_client";
+    const char *pers = "dh_client";
 
     entropy_context entropy;
     ctr_drbg_context ctr_drbg;
@@ -92,7 +88,8 @@ int main( int argc, char *argv[] )
 
     entropy_init( &entropy );
     if( ( ret = ctr_drbg_init( &ctr_drbg, entropy_func, &entropy,
-                               (unsigned char *) pers, strlen( pers ) ) ) != 0 )
+                               (const unsigned char *) pers,
+                               strlen( pers ) ) ) != 0 )
     {
         printf( " failed\n  ! ctr_drbg_init returned %d\n", ret );
         goto exit;
@@ -204,8 +201,8 @@ int main( int argc, char *argv[] )
 
     sha1( buf, (int)( p - 2 - buf ), hash );
 
-    if( ( ret = rsa_pkcs1_verify( &rsa, RSA_PUBLIC, SIG_RSA_SHA1,
-                                  0, hash, p ) ) != 0 )
+    if( ( ret = rsa_pkcs1_verify( &rsa, NULL, NULL, RSA_PUBLIC,
+                                  POLARSSL_MD_SHA1, 0, hash, p ) ) != 0 )
     {
         printf( " failed\n  ! rsa_pkcs1_verify returned %d\n\n", ret );
         goto exit;
@@ -218,7 +215,7 @@ int main( int argc, char *argv[] )
     fflush( stdout );
 
     n = dhm.len;
-    if( ( ret = dhm_make_public( &dhm, dhm.len, buf, n,
+    if( ( ret = dhm_make_public( &dhm, (int) dhm.len, buf, n,
                                  ctr_drbg_random, &ctr_drbg ) ) != 0 )
     {
         printf( " failed\n  ! dhm_make_public returned %d\n\n", ret );
@@ -238,7 +235,8 @@ int main( int argc, char *argv[] )
     fflush( stdout );
 
     n = dhm.len;
-    if( ( ret = dhm_calc_secret( &dhm, buf, &n ) ) != 0 )
+    if( ( ret = dhm_calc_secret( &dhm, buf, &n,
+                                 ctr_drbg_random, &ctr_drbg ) ) != 0 )
     {
         printf( " failed\n  ! dhm_calc_secret returned %d\n\n", ret );
         goto exit;
@@ -277,6 +275,7 @@ exit:
     net_close( server_fd );
     rsa_free( &rsa );
     dhm_free( &dhm );
+    entropy_free( &entropy );
 
 #if defined(_WIN32)
     printf( "  + Press Enter to exit this program.\n" );

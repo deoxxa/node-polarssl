@@ -27,21 +27,29 @@
 
 #if defined(POLARSSL_ERROR_C)
 
+#include "polarssl/error.h"
+
 HEADER_INCLUDED
 
 #include <string.h>
 
-#if defined _MSC_VER && !defined  snprintf
+#if defined(_MSC_VER) && !defined  snprintf && !defined(EFIX64) && \
+    !defined(EFI32)
 #define  snprintf  _snprintf
 #endif
 
-void error_strerror( int ret, char *buf, size_t buflen )
+void polarssl_strerror( int ret, char *buf, size_t buflen )
 {
     size_t len;
     int use_ret;
 
+    if( buflen == 0 )
+        return;
+
     memset( buf, 0x00, buflen );
-     
+    /* Reduce buflen to make sure MSVC _snprintf() ends with \0 as well */
+    buflen -= 1;
+
     if( ret < 0 )
         ret = -ret;
 
@@ -85,5 +93,37 @@ LOW_LEVEL_CODE_CHECKS
 
     snprintf( buf, buflen, "UNKNOWN ERROR CODE (%04X)", use_ret );
 }
+
+#if defined(POLARSSL_ERROR_STRERROR_BC)
+void error_strerror( int ret, char *buf, size_t buflen )
+{
+    polarssl_strerror( ret, buf, buflen );
+}
+#endif /* POLARSSL_ERROR_STRERROR_BC */
+
+#else /* POLARSSL_ERROR_C */
+
+#if defined(POLARSSL_ERROR_STRERROR_DUMMY)
+
+#include <string.h>
+
+/*
+ * Provide an non-function in case POLARSSL_ERROR_C is not defined
+ */
+void polarssl_strerror( int ret, char *buf, size_t buflen )
+{
+    ((void) ret);
+
+    if( buflen > 0 )
+        buf[0] = '\0';
+}
+
+#if defined(POLARSSL_ERROR_STRERROR_BC)
+void error_strerror( int ret, char *buf, size_t buflen )
+{
+    polarssl_strerror( ret, buf, buflen );
+}
+#endif /* POLARSSL_ERROR_STRERROR_BC */
+#endif /* POLARSSL_ERROR_STRERROR_DUMMY */
 
 #endif /* POLARSSL_ERROR_C */

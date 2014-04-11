@@ -1,4 +1,379 @@
-PolarSSL ChangeLog
+PolarSSL ChangeLog (Sorted per branch, date)
+
+= PolarSSL 1.3.6 released on 2014-04-11
+
+Features
+   * Support for the ALPN SSL extension
+   * Add option 'use_dev_random' to gen_key application
+   * Enable verification of the keyUsage extension for CA and leaf
+     certificates (POLARSSL_X509_CHECK_KEY_USAGE)
+   * Enable verification of the extendedKeyUsage extension
+     (POLARSSL_X509_CHECK_EXTENDED_KEY_USAGE)
+
+Changes
+   * x509_crt_info() now prints information about parsed extensions as well
+   * pk_verify() now returns a specific error code when the signature is valid
+     but shorter than the supplied length.
+   * Use UTC time to check certificate validity.
+   * Reject certificates with times not in UTC, per RFC 5280.
+
+Security
+   * Avoid potential timing leak in ecdsa_sign() by blinding modular division.
+     (Found by Watson Ladd.)
+   * The notAfter date of some certificates was no longer checked since 1.3.5.
+     This affects certificates in the user-supplied chain except the top
+     certificate. If the user-supplied chain contains only one certificates,
+     it is not affected (ie, its notAfter date is properly checked).
+   * Prevent potential NULL pointer dereference in ssl_read_record() (found by
+     TrustInSoft)
+
+Bugfix
+   * The length of various ClientKeyExchange messages was not properly checked.
+   * Some example server programs were not sending the close_notify alert.
+   * Potential memory leak in mpi_exp_mod() when error occurs during
+     calculation of RR.
+   * Fixed malloc/free default #define in platform.c (found by Gergely Budai).
+   * Fixed type which made POLARSSL_ENTROPY_FORCE_SHA256 uneffective (found by
+     Gergely Budai).
+   * Fix #include path in ecdsa.h which wasn't accepted by some compilers.
+     (found by Gergely Budai)
+   * Fix compile errors when POLARSSL_ERROR_STRERROR_BC is undefined (found by
+     Shuo Chen).
+   * oid_get_numeric_string() used to truncate the output without returning an
+     error if the output buffer was just 1 byte too small.
+   * dhm_parse_dhm() (hence dhm_parse_dhmfile()) did not set dhm->len.
+   * Calling pk_debug() on an RSA-alt key would segfault.
+   * pk_get_size() and pk_get_len() were off by a factor 8 for RSA-alt keys.
+   * Potential buffer overwrite in pem_write_buffer() because of low length
+     indication (found by Thijs Alkemade)
+   * EC curves constants, which should be only in ROM since 1.3.3, were also
+     stored in RAM due to missing 'const's (found by Gergely Budai).
+
+= PolarSSL 1.3.5 released on 2014-03-26
+Features
+   * HMAC-DRBG as a separate module
+   * Option to set the Curve preference order (disabled by default)
+   * Single Platform compatilibity layer (for memory / printf / fprintf)
+   * Ability to provide alternate timing implementation
+   * Ability to force the entropy module to use SHA-256 as its basis
+     (POLARSSL_ENTROPY_FORCE_SHA256)
+   * Testing script ssl-opt.sh added for testing 'live' ssl option
+     interoperability against OpenSSL and PolarSSL
+   * Support for reading EC keys that use SpecifiedECDomain in some cases.
+   * Entropy module now supports seed writing and reading
+
+Changes
+   * Deprecated the Memory layer
+   * entropy_add_source(), entropy_update_manual() and entropy_gather()
+     now thread-safe if POLARSSL_THREADING_C defined
+   * Improvements to the CMake build system, contributed by Julian Ospald.
+   * Work around a bug of the version of Clang shipped by Apple with Mavericks
+     that prevented bignum.c from compiling. (Reported by Rafael Baptista.)
+   * Revamped the compat.sh interoperatibility script to include support for
+     testing against GnuTLS
+   * Deprecated ssl_set_own_cert_rsa() and ssl_set_own_cert_rsa_alt()
+   * Improvements to tests/Makefile, contributed by Oden Eriksson.
+
+Security
+   * Forbid change of server certificate during renegotiation to prevent
+     "triple handshake" attack when authentication mode is 'optional' (the
+     attack was already impossible when authentication is required).
+   * Check notBefore timestamp of certificates and CRLs from the future.
+   * Forbid sequence number wrapping
+   * Fixed possible buffer overflow with overlong PSK
+   * Possible remotely-triggered out-of-bounds memory access fixed (found by
+     TrustInSoft)
+
+Bugfix
+   * ecp_gen_keypair() does more tries to prevent failure because of
+     statistics
+   * Fixed bug in RSA PKCS#1 v1.5 "reversed" operations
+   * Fixed testing with out-of-source builds using cmake
+   * Fixed version-major intolerance in server
+   * Fixed CMake symlinking on out-of-source builds
+   * Fixed dependency issues in test suite
+   * Programs rsa_sign_pss and rsa_verify_pss were not using PSS since 1.3.0
+   * Bignum's MIPS-32 assembly was used on MIPS-64, causing chaos. (Found by
+     Alex Wilson.)
+   * ssl_cache was creating entries when max_entries=0 if TIMING_C was enabled.
+   * m_sleep() was sleeping twice too long on most Unix platforms.
+   * Fixed bug with session tickets and non-blocking I/O in the unlikely case
+     send() would return an EAGAIN error when sending the ticket.
+   * ssl_cache was leaking memory when reusing a timed out entry containing a
+     client certificate.
+   * ssl_srv was leaking memory when client presented a timed out ticket
+     containing a client certificate
+   * ssl_init() was leaving a dirty pointer in ssl_context if malloc of
+     out_ctr failed
+   * ssl_handshake_init() was leaving dirty pointers in subcontexts if malloc
+     of one of them failed
+   * Fix typo in rsa_copy() that impacted PKCS#1 v2 contexts
+   * x509_get_current_time() uses localtime_r() to prevent thread issues
+
+= PolarSSL 1.3.4 released on 2014-01-27
+Features
+   * Support for the Koblitz curves: secp192k1, secp224k1, secp256k1
+   * Support for RIPEMD-160
+   * Support for AES CFB8 mode
+   * Support for deterministic ECDSA (RFC 6979)
+
+Bugfix
+   * Potential memory leak in bignum_selftest()
+   * Replaced expired test certificate
+   * ssl_mail_client now terminates lines with CRLF, instead of LF
+   * net module handles timeouts on blocking sockets better (found by Tilman
+     Sauerbeck)
+   * Assembly format fixes in bn_mul.h
+
+Security
+   * Missing MPI_CHK calls added around unguarded mpi calls (found by
+     TrustInSoft)
+
+= PolarSSL 1.3.3 released on 2013-12-31
+Features
+   * EC key generation support in gen_key app
+   * Support for adhering to client ciphersuite order preference
+     (POLARSSL_SSL_SRV_RESPECT_CLIENT_PREFERENCE)
+   * Support for Curve25519
+   * Support for ECDH-RSA and ECDH-ECDSA key exchanges and ciphersuites
+   * Support for IPv6 in the NET module
+   * AES-NI support for AES, AES-GCM and AES key scheduling
+   * SSL Pthread-based server example added (ssl_pthread_server)
+
+Changes
+   * gen_prime() speedup
+   * Speedup of ECP multiplication operation
+   * Relaxed some SHA2 ciphersuite's version requirements
+   * Dropped use of readdir_r() instead of readdir() with threading support
+   * More constant-time checks in the RSA module
+   * Split off curves from ecp.c into ecp_curves.c
+   * Curves are now stored fully in ROM
+   * Memory usage optimizations in ECP module
+   * Removed POLARSSL_THREADING_DUMMY
+
+Bugfix
+   * Fixed bug in mpi_set_bit() on platforms where t_uint is wider than int
+   * Fixed X.509 hostname comparison (with non-regular characters)
+   * SSL now gracefully handles missing RNG
+   * Missing defines / cases for RSA_PSK key exchange
+   * crypt_and_hash app checks MAC before final decryption
+   * Potential memory leak in ssl_ticket_keys_init()
+   * Memory leak in benchmark application
+   * Fixed x509_crt_parse_path() bug on Windows platforms
+   * Added missing MPI_CHK() around some statements in mpi_div_mpi() (found by
+     TrustInSoft)
+   * Fixed potential overflow in certificate size verification in
+     ssl_write_certificate() (found by TrustInSoft)
+
+Security
+   * Possible remotely-triggered out-of-bounds memory access fixed (found by
+     TrustInSoft)
+
+= PolarSSL 1.3.2 released on 2013-11-04
+Features
+   * PK tests added to test framework
+   * Added optional optimization for NIST MODP curves (POLARSSL_ECP_NIST_OPTIM)
+   * Support for Camellia-GCM mode and ciphersuites
+
+Changes
+   * Padding checks in cipher layer are now constant-time
+   * Value comparisons in SSL layer are now constant-time
+   * Support for serialNumber, postalAddress and postalCode in X509 names
+   * SSL Renegotiation was refactored
+
+Bugfix
+   * More stringent checks in cipher layer
+   * Server does not send out extensions not advertised by client
+   * Prevent possible alignment warnings on casting from char * to 'aligned *'
+   * Misc fixes and additions to dependency checks
+   * Const correctness
+   * cert_write with selfsign should use issuer_name as subject_name
+   * Fix ECDSA corner case: missing reduction mod N (found by DualTachyon)
+   * Defines to handle UEFI environment under MSVC
+   * Server-side initiated renegotiations send HelloRequest
+
+= PolarSSL 1.3.1 released on 2013-10-15
+Features
+   * Support for Brainpool curves and TLS ciphersuites (RFC 7027)
+   * Support for ECDHE-PSK key-exchange and ciphersuites
+   * Support for RSA-PSK key-exchange and ciphersuites
+
+Changes
+   * RSA blinding locks for a smaller amount of time
+   * TLS compression only allocates working buffer once
+   * Introduced POLARSSL_HAVE_READDIR_R for systems without it
+   * config.h is more script-friendly
+
+Bugfix
+   * Missing MSVC defines added
+   * Compile errors with POLARSSL_RSA_NO_CRT
+   * Header files with 'polarssl/'
+   * Const correctness
+   * Possible naming collision in dhm_context
+   * Better support for MSVC
+   * threading_set_alt() name
+   * Added missing x509write_crt_set_version()
+
+= PolarSSL 1.3.0 released on 2013-10-01
+Features
+   * Elliptic Curve Cryptography module added
+   * Elliptic Curve Diffie Hellman module added
+   * Ephemeral Elliptic Curve Diffie Hellman support for SSL/TLS
+    (ECDHE-based ciphersuites)
+   * Ephemeral Elliptic Curve Digital Signature Algorithm support for SSL/TLS
+    (ECDSA-based ciphersuites)
+   * Ability to specify allowed ciphersuites based on the protocol version.
+   * PSK and DHE-PSK based ciphersuites added
+   * Memory allocation abstraction layer added
+   * Buffer-based memory allocator added (no malloc() / free() / HEAP usage)
+   * Threading abstraction layer added (dummy / pthread / alternate)
+   * Public Key abstraction layer added
+   * Parsing Elliptic Curve keys
+   * Parsing Elliptic Curve certificates
+   * Support for max_fragment_length extension (RFC 6066)
+   * Support for truncated_hmac extension (RFC 6066)
+   * Support for zeros-and-length (ANSI X.923) padding, one-and-zeros
+     (ISO/IEC 7816-4) padding and zero padding in the cipher layer
+   * Support for session tickets (RFC 5077)
+   * Certificate Request (CSR) generation with extensions (key_usage,
+     ns_cert_type)
+   * X509 Certificate writing with extensions (basic_constraints,
+     issuer_key_identifier, etc)
+   * Optional blinding for RSA, DHM and EC
+   * Support for multiple active certificate / key pairs in SSL servers for
+   	 the same host (Not to be confused with SNI!)
+
+Changes
+   * Ability to enable / disable SSL v3 / TLS 1.0 / TLS 1.1 / TLS 1.2
+     individually
+   * Introduced separate SSL Ciphersuites module that is based on
+     Cipher and MD information
+   * Internals for SSL module adapted to have separate IV pointer that is
+     dynamically set (Better support for hardware acceleration)
+   * Moved all OID functionality to a separate module. RSA function
+     prototypes for the RSA sign and verify functions changed as a result
+   * Split up the GCM module into a starts/update/finish cycle
+   * Client and server now filter sent and accepted ciphersuites on minimum
+     and maximum protocol version
+   * Ability to disable server_name extension (RFC 6066)
+   * Renamed error_strerror() to the less conflicting polarssl_strerror()
+     (Ability to keep old as well with POLARSSL_ERROR_STRERROR_BC)
+   * SHA2 renamed to SHA256, SHA4 renamed to SHA512 and functions accordingly
+   * All RSA operations require a random generator for blinding purposes
+   * X509 core refactored
+   * x509_crt_verify() now case insensitive for cn (RFC 6125 6.4)
+   * Also compiles / runs without time-based functions (!POLARSSL_HAVE_TIME)
+   * Support faulty X509 v1 certificates with extensions
+     (POLARSSL_X509_ALLOW_EXTENSIONS_NON_V3)
+
+Bugfix
+   * Fixed parse error in ssl_parse_certificate_request()
+   * zlib compression/decompression skipped on empty blocks
+   * Support for AIX header locations in net.c module
+   * Fixed file descriptor leaks
+
+Security
+   * RSA blinding on CRT operations to counter timing attacks
+     (found by Cyril Arnaud and Pierre-Alain Fouque)
+
+= Version 1.2.10 released 2013-10-07
+Changes
+   * Changed RSA blinding to a slower but thread-safe version
+
+Bugfix
+   * Fixed memory leak in RSA as a result of introduction of blinding
+   * Fixed ssl_pkcs11_decrypt() prototype
+   * Fixed MSVC project files
+
+= Version 1.2.9 released 2013-10-01
+Changes
+   * x509_verify() now case insensitive for cn (RFC 6125 6.4)
+
+Bugfix
+   * Fixed potential memory leak when failing to resume a session
+   * Fixed potential file descriptor leaks (found by Remi Gacogne)
+   * Minor fixes
+
+Security
+   * Fixed potential heap buffer overflow on large hostname setting
+   * Fixed potential negative value misinterpretation in load_file()
+   * RSA blinding on CRT operations to counter timing attacks
+     (found by Cyril Arnaud and Pierre-Alain Fouque)
+
+= Version 1.2.8 released 2013-06-19
+Features
+   * Parsing of PKCS#8 encrypted private key files
+   * PKCS#12 PBE and derivation functions
+   * Centralized module option values in config.h to allow user-defined
+     settings without editing header files by using POLARSSL_CONFIG_OPTIONS
+
+Changes
+   * HAVEGE random generator disabled by default
+   * Internally split up x509parse_key() into a (PEM) handler function
+     and specific DER parser functions for the PKCS#1 and unencrypted
+     PKCS#8 private key formats
+   * Added mechanism to provide alternative implementations for all
+     symmetric cipher and hash algorithms (e.g. POLARSSL_AES_ALT in
+	 config.h)
+   * PKCS#5 module added. Moved PBKDF2 functionality inside and deprecated
+     old PBKDF2 module
+
+Bugfix
+   * Secure renegotiation extension should only be sent in case client
+     supports secure renegotiation
+   * Fixed offset for cert_type list in ssl_parse_certificate_request()
+   * Fixed const correctness issues that have no impact on the ABI
+   * x509parse_crt() now better handles PEM error situations
+   * ssl_parse_certificate() now calls x509parse_crt_der() directly
+     instead of the x509parse_crt() wrapper that can also parse PEM
+	 certificates
+   * x509parse_crtpath() is now reentrant and uses more portable stat()
+   * Fixed bignum.c and bn_mul.h to support Thumb2 and LLVM compiler
+   * Fixed values for 2-key Triple DES in cipher layer
+   * ssl_write_certificate_request() can handle empty ca_chain
+
+Security
+   * A possible DoS during the SSL Handshake, due to faulty parsing of
+     PEM-encoded certificates has been fixed (found by Jack Lloyd)
+
+= Version 1.2.7 released 2013-04-13
+Features
+   * Ability to specify allowed ciphersuites based on the protocol version.
+
+Changes
+   * Default Blowfish keysize is now 128-bits
+   * Test suites made smaller to accommodate Raspberry Pi
+
+Bugfix
+   * Fix for MPI assembly for ARM
+   * GCM adapted to support sizes > 2^29
+
+= Version 1.2.6 released 2013-03-11
+Bugfix
+   * Fixed memory leak in ssl_free() and ssl_reset() for active session
+   * Corrected GCM counter incrementation to use only 32-bits instead of
+     128-bits (found by Yawning Angel)
+   * Fixes for 64-bit compilation with MS Visual Studio
+   * Fixed net_bind() for specified IP addresses on little endian systems
+   * Fixed assembly code for ARM (Thumb and regular) for some compilers
+
+Changes
+   * Internally split up rsa_pkcs1_encrypt(), rsa_pkcs1_decrypt(),
+     rsa_pkcs1_sign() and rsa_pkcs1_verify() to separate PKCS#1 v1.5 and
+     PKCS#1 v2.1 functions
+   * Added support for custom labels when using rsa_rsaes_oaep_encrypt()
+     or rsa_rsaes_oaep_decrypt()
+   * Re-added handling for SSLv2 Client Hello when the define
+     POLARSSL_SSL_SRV_SUPPORT_SSLV2_CLIENT_HELLO is set
+   * The SSL session cache module (ssl_cache) now also retains peer_cert
+     information (not the entire chain)
+
+Security
+   * Removed further timing differences during SSL message decryption in
+     ssl_decrypt_buf()
+   * Removed timing differences due to bad padding from
+     rsa_rsaes_pkcs1_v15_decrypt() and rsa_pkcs1_decrypt() for PKCS#1 v1.5
+     operations
 
 = Version 1.2.5 released 2013-02-02
 Changes
@@ -7,7 +382,7 @@ Changes
      disabled by default and can be enabled with POLARSSL_SSL_DEBUG_ALL 
    * Sending of security-relevant alert messages that do not break
      interoperability can be switched on/off with the flag
-	 POLARSSL_SSL_ALL_ALERT_MESSAGES
+     POLARSSL_SSL_ALL_ALERT_MESSAGES
 
 Security
    * Removed timing differences during SSL message decryption in
@@ -15,6 +390,8 @@ Security
 
 = Version 1.2.4 released 2013-01-25
 Changes
+   * More advanced SSL ciphersuite representation and moved to more dynamic
+     SSL core
    * Added ssl_handshake_step() to allow single stepping the handshake process
 
 Bugfix
@@ -119,6 +496,49 @@ Security
    * Fixed potential memory zeroization on miscrafted RSA key (found by Eloi
      Vanderbeken)
 
+= Version 1.1.8 released on 2013-10-01
+Bugfix
+   * Fixed potential memory leak when failing to resume a session
+   * Fixed potential file descriptor leaks
+
+Security
+   * Potential buffer-overflow for ssl_read_record() (independently found by
+     both TrustInSoft and Paul Brodeur of Leviathan Security Group)
+   * Potential negative value misinterpretation in load_file()
+   * Potential heap buffer overflow on large hostname setting
+
+= Version 1.1.7 released on 2013-06-19
+Changes
+   * HAVEGE random generator disabled by default
+
+Bugfix
+   * x509parse_crt() now better handles PEM error situations
+   * ssl_parse_certificate() now calls x509parse_crt_der() directly
+     instead of the x509parse_crt() wrapper that can also parse PEM
+	 certificates
+   * Fixed values for 2-key Triple DES in cipher layer
+   * ssl_write_certificate_request() can handle empty ca_chain
+
+Security
+   * A possible DoS during the SSL Handshake, due to faulty parsing of
+     PEM-encoded certificates has been fixed (found by Jack Lloyd)
+
+= Version 1.1.6 released on 2013-03-11
+Bugfix
+   * Fixed net_bind() for specified IP addresses on little endian systems
+
+Changes
+   * Allow enabling of dummy error_strerror() to support some use-cases
+   * Debug messages about padding errors during SSL message decryption are
+     disabled by default and can be enabled with POLARSSL_SSL_DEBUG_ALL
+
+Security
+   * Removed timing differences during SSL message decryption in
+     ssl_decrypt_buf()
+   * Removed timing differences due to bad padding from
+     rsa_rsaes_pkcs1_v15_decrypt() and rsa_pkcs1_decrypt() for PKCS#1 v1.5
+     operations
+
 = Version 1.1.5 released on 2013-01-16
 Bugfix
    * Fixed MPI assembly for SPARC64 platform
@@ -206,12 +626,12 @@ Changes
      management (Closes ticket #44)
    * Changed the used random function pointer to more flexible format. Renamed
      havege_rand() to havege_random() to prevent mistakes. Lots of changes as
-	 a consequence in library code and programs
+     a consequence in library code and programs
    * Moved all examples programs to use the new entropy and CTR_DRBG
    * Added permissive certificate parsing to x509parse_crt() and
      x509parse_crtfile(). With permissive parsing the parsing does not stop on
-	 encountering a parse-error. Beware that the meaning of return values has
-	 changed!
+     encountering a parse-error. Beware that the meaning of return values has
+     changed!
    * All error codes are now negative. Even on mermory failures and IO errors.
 
 Bugfix
@@ -247,7 +667,7 @@ Bugfix
 Features
    * Added additional Cipher Block Modes to symmetric ciphers
      (AES CTR, Camellia CTR, XTEA CBC) including the option to
-	 enable and disable individual modes when needed
+     enable and disable individual modes when needed
    * Functions requiring File System functions can now be disabled
      by undefining POLARSSL_FS_IO
    * A error_strerror function() has been added to translate between
@@ -259,22 +679,22 @@ Features
 Changes
    * Major argument / variable rewrite. Introduced use of size_t
      instead of int for buffer lengths and loop variables for
-	 better unsigned / signed use. Renamed internal bigint types
-	 t_int and t_dbl to t_uint and t_udbl in the process
+     better unsigned / signed use. Renamed internal bigint types
+     t_int and t_dbl to t_uint and t_udbl in the process
    * mpi_init() and mpi_free() now only accept a single MPI
      argument and do not accept variable argument lists anymore.
    * The error codes have been remapped and combining error codes
      is now done with a PLUS instead of an OR as error codes
-	 used are negative.
+     used are negative.
    * Changed behaviour of net_read(), ssl_fetch_input() and ssl_recv().
      net_recv() now returns 0 on EOF instead of
-	 POLARSSL_ERR_NET_CONN_RESET. ssl_fetch_input() returns
-	 POLARSSL_ERR_SSL_CONN_EOF on an EOF from its f_recv() function.
-	 ssl_read() returns 0 if a POLARSSL_ERR_SSL_CONN_EOF is received
-	 after the handshake.
+     POLARSSL_ERR_NET_CONN_RESET. ssl_fetch_input() returns
+     POLARSSL_ERR_SSL_CONN_EOF on an EOF from its f_recv() function.
+     ssl_read() returns 0 if a POLARSSL_ERR_SSL_CONN_EOF is received
+     after the handshake.
    * Network functions now return POLARSSL_ERR_NET_WANT_READ or
      POLARSSL_ERR_NET_WANT_WRITE instead of the ambiguous
-	 POLARSSL_ERR_NET_TRY_AGAIN
+     POLARSSL_ERR_NET_TRY_AGAIN
 
 = Version 0.99-pre4 released on 2011-04-01
 Features
@@ -290,12 +710,12 @@ Changes
      displays actual bit size of the value.
    * x509parse_key() (and as a consequence x509parse_keyfile()) 
      does not zeroize memory in advance anymore. Use rsa_init()
-	 before parsing a key or keyfile!
+     before parsing a key or keyfile!
 
 Bugfix
    * Debug output of MPI's now the same independent of underlying
      platform (32-bit / 64-bit) (Fixes ticket #19, found by Mads
-	 Kiilerich and Mihai Militaru)
+     Kiilerich and Mihai Militaru)
    * Fixed bug in ssl_write() when flushing old data (Fixed ticket
      #18, found by Nikolay Epifanov)
    * Fixed proper handling of RSASSA-PSS verification with variable
@@ -312,7 +732,7 @@ Features
 Changes
    * Parsing of PEM files moved to separate module (Fixes 
      ticket #13). Also possible to remove PEM support for
-	 systems only using DER encoding
+     systems only using DER encoding
 
 Bugfixes
    * Corrected parsing of UTCTime dates before 1990 and
@@ -324,12 +744,12 @@ Bugfixes
    * Replaced the expired test certificates
    * Do not bail out if no client certificate specified. Try
      to negotiate anonymous connection (Fixes ticket #12,
-	 found by Boris Krasnovskiy)
+     found by Boris Krasnovskiy)
 
 Security fixes
    * Fixed a possible Man-in-the-Middle attack on the
      Diffie Hellman key exchange (thanks to Larry Highsmith,
-	 Subreption LLC)
+     Subreption LLC)
 
 = Version 0.99-pre1 released on 2011-01-30
 Features
@@ -357,9 +777,9 @@ Changes
      the existing date check
    * The ciphers member of ssl_context and the cipher member
      of ssl_session have been renamed to ciphersuites and
-	 ciphersuite respectively. This clarifies the difference
-	 with the generic cipher layer and is better naming
-	 altogether
+     ciphersuite respectively. This clarifies the difference
+     with the generic cipher layer and is better naming
+     altogether
 
 = Version 0.14.0 released on 2010-08-16
 Features
@@ -373,8 +793,8 @@ Changes
    * Made Makefile cleaner
    * Removed dependency on rand() in rsa_pkcs1_encrypt().
      Now using random fuction provided to function and
-	 changed the prototype of rsa_pkcs1_encrypt(),
-	 rsa_init() and rsa_gen_key().
+     changed the prototype of rsa_pkcs1_encrypt(),
+     rsa_init() and rsa_gen_key().
    * Some SSL defines were renamed in order to avoid
      future confusion
 
@@ -405,7 +825,7 @@ Changes
      in a function to allow easy future expansion
    * Changed symmetric cipher functions to
      identical interface (returning int result values)
-   * Changed ARC4 to use seperate input/output buffer
+   * Changed ARC4 to use separate input/output buffer
    * Added reset function for HMAC context as speed-up
      for specific use-cases
 
@@ -645,7 +1065,7 @@ XySSL ChangeLog
     * Multiple fixes to enhance the compatibility with g++,
       thanks to Xosé Antón Otero Ferreira
     * Fixed a bug in the CBC code, thanks to dowst; also,
-      the bignum code is no longer dependant on long long
+      the bignum code is no longer dependent on long long
     * Updated rsa_pkcs1_sign to handle arbitrary large inputs
     * Updated timing.c for improved compatibility with i386
       and 486 processors, thanks to Arnaud Cornet

@@ -3,7 +3,7 @@
  *
  * \brief Blowfish block cipher
  *
- *  Copyright (C) 2012-2012, Brainspark B.V.
+ *  Copyright (C) 2012-2013, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -27,9 +27,11 @@
 #ifndef POLARSSL_BLOWFISH_H
 #define POLARSSL_BLOWFISH_H
 
+#include "config.h"
+
 #include <string.h>
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(EFIX64) && !defined(EFI32)
 #include <basetsd.h>
 typedef UINT32 uint32_t;
 #else
@@ -46,6 +48,14 @@ typedef UINT32 uint32_t;
 #define POLARSSL_ERR_BLOWFISH_INVALID_KEY_LENGTH                -0x0016  /**< Invalid key length. */
 #define POLARSSL_ERR_BLOWFISH_INVALID_INPUT_LENGTH              -0x0018  /**< Invalid data input length. */
 
+#if !defined(POLARSSL_BLOWFISH_ALT)
+// Regular implementation
+//
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * \brief          Blowfish context structure
  */
@@ -55,10 +65,6 @@ typedef struct
     uint32_t S[4][256];                 /*!<  key dependent S-boxes  */
 }
 blowfish_context;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * \brief          Blowfish key schedule
@@ -86,6 +92,7 @@ int blowfish_crypt_ecb( blowfish_context *ctx,
                         const unsigned char input[BLOWFISH_BLOCKSIZE],
                         unsigned char output[BLOWFISH_BLOCKSIZE] );
 
+#if defined(POLARSSL_CIPHER_MODE_CBC)
 /**
  * \brief          Blowfish-CBC buffer encryption/decryption
  *                 Length should be a multiple of the block
@@ -106,11 +113,12 @@ int blowfish_crypt_cbc( blowfish_context *ctx,
                         unsigned char iv[BLOWFISH_BLOCKSIZE],
                         const unsigned char *input,
                         unsigned char *output );
+#endif /* POLARSSL_CIPHER_MODE_CBC */
 
+#if defined(POLARSSL_CIPHER_MODE_CFB)
 /**
  * \brief          Blowfish CFB buffer encryption/decryption.
  *
- * both 
  * \param ctx      Blowfish context
  * \param mode     BLOWFISH_ENCRYPT or BLOWFISH_DECRYPT
  * \param length   length of the input data
@@ -128,12 +136,15 @@ int blowfish_crypt_cfb64( blowfish_context *ctx,
                           unsigned char iv[BLOWFISH_BLOCKSIZE],
                           const unsigned char *input,
                           unsigned char *output );
+#endif /*POLARSSL_CIPHER_MODE_CFB */
 
+#if defined(POLARSSL_CIPHER_MODE_CTR)
 /**
  * \brief               Blowfish-CTR buffer encryption/decryption
  *
  * Warning: You have to keep the maximum use of your counter in mind!
  *
+ * \param ctx           Blowfish context
  * \param length        The length of the data
  * \param nc_off        The offset in the current stream_block (for resuming
  *                      within current cipher stream). The offset pointer to
@@ -153,9 +164,14 @@ int blowfish_crypt_ctr( blowfish_context *ctx,
                         unsigned char stream_block[BLOWFISH_BLOCKSIZE],
                         const unsigned char *input,
                         unsigned char *output );
+#endif /* POLARSSL_CIPHER_MODE_CTR */
 
 #ifdef __cplusplus
 }
 #endif
+
+#else  /* POLARSSL_BLOWFISH_ALT */
+#include "blowfish_alt.h"
+#endif /* POLARSSL_BLOWFISH_ALT */
 
 #endif /* blowfish.h */

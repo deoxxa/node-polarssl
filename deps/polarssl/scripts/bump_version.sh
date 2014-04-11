@@ -26,6 +26,7 @@ do
       echo "Usage: $0"
       echo -e "  -h|--help\t\t\tPrint this help."
       echo -e "  --version <version>\tVersion to bump to."
+      echo -e "  --soversion <version>\tSO version to bump to."
       echo -e "  -v|--verbose\t\tVerbose."
       exit 1
       ;;
@@ -53,6 +54,10 @@ then
   [ $VERBOSE ] && echo "Bumping SOVERSION in library/CMakeLists.txt"
   sed -e "s/ SOVERSION [0-9]\+/ SOVERSION $SOVERSION/g" < library/CMakeLists.txt > tmp
   mv tmp library/CMakeLists.txt
+
+  [ $VERBOSE ] && echo "Bumping SOVERSION in library/Makefile"
+  sed -e "s/SONAME=libpolarssl.so.[0-9]\+/SONAME=libpolarssl.so.$SOVERSION/g" -e "s/DLEXT=so.[0-9]\+/DLEXT=so.$SOVERSION/g" < library/Makefile > tmp
+  mv tmp library/Makefile
 fi
 
 [ $VERBOSE ] && echo "Bumping VERSION in include/polarssl/version.h"

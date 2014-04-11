@@ -23,26 +23,26 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _CRT_SECURE_NO_DEPRECATE
-#define _CRT_SECURE_NO_DEPRECATE 1
-#endif
+#include "polarssl/config.h"
 
 #include <string.h>
 #include <stdio.h>
 
-#include "polarssl/config.h"
-
 #include "polarssl/rsa.h"
+#include "polarssl/entropy.h"
+#include "polarssl/ctr_drbg.h"
 
 #if !defined(POLARSSL_BIGNUM_C) || !defined(POLARSSL_RSA_C) ||  \
-    !defined(POLARSSL_FS_IO)
+    !defined(POLARSSL_FS_IO) || !defined(POLARSSL_ENTROPY_C) || \
+    !defined(POLARSSL_CTR_DRBG_C)
 int main( int argc, char *argv[] )
 {
     ((void) argc);
     ((void) argv);
 
     printf("POLARSSL_BIGNUM_C and/or POLARSSL_RSA_C and/or "
-           "POLARSSL_FS_IO not defined.\n");
+           "POLARSSL_FS_IO and/or POLARSSL_ENTROPY_C and/or "
+           "POLARSSL_CTR_DRBG_C not defined.\n");
     return( 0 );
 }
 #else
@@ -52,8 +52,11 @@ int main( int argc, char *argv[] )
     int ret, c;
     size_t i;
     rsa_context rsa;
+    entropy_context entropy;
+    ctr_drbg_context ctr_drbg;
     unsigned char result[1024];
     unsigned char buf[512];
+    const char *pers = "rsa_decrypt";
     ((void) argv);
 
     memset(result, 0, sizeof( result ) );
@@ -67,6 +70,18 @@ int main( int argc, char *argv[] )
         printf( "\n" );
 #endif
 
+        goto exit;
+    }
+
+    printf( "\n  . Seeding the random number generator..." );
+    fflush( stdout );
+
+    entropy_init( &entropy );
+    if( ( ret = ctr_drbg_init( &ctr_drbg, entropy_func, &entropy,
+                               (const unsigned char *) pers,
+                               strlen( pers ) ) ) != 0 )
+    {
+        printf( " failed\n  ! ctr_drbg_init returned %d\n", ret );
         goto exit;
     }
 
@@ -130,7 +145,8 @@ int main( int argc, char *argv[] )
     printf( "\n  . Decrypting the encrypted data" );
     fflush( stdout );
 
-    if( ( ret = rsa_pkcs1_decrypt( &rsa, RSA_PRIVATE, &i, buf, result,
+    if( ( ret = rsa_pkcs1_decrypt( &rsa, ctr_drbg_random, &ctr_drbg,
+                                   RSA_PRIVATE, &i, buf, result,
                                    1024 ) ) != 0 )
     {
         printf( " failed\n  ! rsa_pkcs1_decrypt returned %d\n\n", ret );
@@ -144,6 +160,7 @@ int main( int argc, char *argv[] )
     ret = 0;
 
 exit:
+    entropy_free( &entropy );
 
 #if defined(_WIN32)
     printf( "  + Press Enter to exit this program.\n" );

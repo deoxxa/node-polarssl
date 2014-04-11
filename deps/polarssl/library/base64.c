@@ -1,7 +1,7 @@
 /*
  *  RFC 1521 base64 encoding/decoding
  *
- *  Copyright (C) 2006-2010, Brainspark B.V.
+ *  Copyright (C) 2006-2014, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -29,11 +29,17 @@
 
 #include "polarssl/base64.h"
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(EFIX64) && !defined(EFI32)
 #include <basetsd.h>
 typedef UINT32 uint32_t;
 #else
 #include <inttypes.h>
+#endif
+
+#if defined(POLARSSL_PLATFORM_C)
+#include "polarssl/platform.h"
+#else
+#define polarssl_printf printf
 #endif
 
 static const unsigned char base64_enc_map[64] =
@@ -137,7 +143,7 @@ int base64_decode( unsigned char *dst, size_t *dlen,
     uint32_t j, x;
     unsigned char *p;
 
-    for( i = j = n = 0; i < slen; i++ )
+    for( i = n = j = 0; i < slen; i++ )
     {
         if( ( slen - i ) >= 2 &&
             src[i] == '\r' && src[i + 1] == '\n' )
@@ -163,7 +169,7 @@ int base64_decode( unsigned char *dst, size_t *dlen,
 
     n = ((n * 6) + 7) >> 3;
 
-    if( *dlen < n )
+    if( dst == NULL || *dlen < n )
     {
         *dlen = n;
         return( POLARSSL_ERR_BASE64_BUFFER_TOO_SMALL );
@@ -218,40 +224,41 @@ static const unsigned char base64_test_enc[] =
 int base64_self_test( int verbose )
 {
     size_t len;
-    unsigned char *src, buffer[128];
+    const unsigned char *src;
+    unsigned char buffer[128];
 
     if( verbose != 0 )
-        printf( "  Base64 encoding test: " );
+        polarssl_printf( "  Base64 encoding test: " );
 
     len = sizeof( buffer );
-    src = (unsigned char *) base64_test_dec;
+    src = base64_test_dec;
 
     if( base64_encode( buffer, &len, src, 64 ) != 0 ||
-         memcmp( base64_test_enc, buffer, 88 ) != 0 ) 
+         memcmp( base64_test_enc, buffer, 88 ) != 0 )
     {
         if( verbose != 0 )
-            printf( "failed\n" );
+            polarssl_printf( "failed\n" );
 
         return( 1 );
     }
 
     if( verbose != 0 )
-        printf( "passed\n  Base64 decoding test: " );
+        polarssl_printf( "passed\n  Base64 decoding test: " );
 
     len = sizeof( buffer );
-    src = (unsigned char *) base64_test_enc;
+    src = base64_test_enc;
 
     if( base64_decode( buffer, &len, src, 88 ) != 0 ||
          memcmp( base64_test_dec, buffer, 64 ) != 0 )
     {
         if( verbose != 0 )
-            printf( "failed\n" );
+            polarssl_printf( "failed\n" );
 
         return( 1 );
     }
 
     if( verbose != 0 )
-        printf( "passed\n\n" );
+        polarssl_printf( "passed\n\n" );
 
     return( 0 );
 }

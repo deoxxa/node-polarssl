@@ -1,4 +1,6 @@
-#include <polarssl/config.h>
+#if defined(POLARSSL_MEMORY_BUFFER_ALLOC_C)
+#include "polarssl/memory.h"
+#endif
 
 #ifdef _MSC_VER
 #include <basetsd.h>
@@ -6,6 +8,10 @@ typedef UINT32 uint32_t;
 #else
 #include <inttypes.h>
 #endif
+
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
 /*
  * 32-bit integer manipulation macros (big endian)
@@ -30,7 +36,7 @@ typedef UINT32 uint32_t;
 }
 #endif
 
-int unhexify(unsigned char *obuf, const char *ibuf)
+static int unhexify(unsigned char *obuf, const char *ibuf)
 {
     unsigned char c, c2;
     int len = strlen(ibuf) / 2;
@@ -64,7 +70,7 @@ int unhexify(unsigned char *obuf, const char *ibuf)
     return len;
 }
 
-void hexify(unsigned char *obuf, const unsigned char *ibuf, int len)
+static void hexify(unsigned char *obuf, const unsigned char *ibuf, int len)
 {
     unsigned char l, h;
 
@@ -192,7 +198,7 @@ static int rnd_pseudo_rand( void *rng_state, unsigned char *output, size_t len )
 {
     rnd_pseudo_info *info = (rnd_pseudo_info *) rng_state;
     uint32_t i, *k, sum, delta=0x9E3779B9;
-    unsigned char result[4];
+    unsigned char result[4], *out = output;
 
     if( rng_state == NULL )
         return( rnd_std_rand( NULL, output, len ) );
@@ -212,8 +218,9 @@ static int rnd_pseudo_rand( void *rng_state, unsigned char *output, size_t len )
         }
 
         PUT_UINT32_BE( info->v0, result, 0 );
-        memcpy( output, result, use_len );
+        memcpy( out, result, use_len );
         len -= use_len;
+        out += 4;
     }
 
     return( 0 );

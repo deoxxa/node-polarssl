@@ -3,7 +3,7 @@
  *
  * \brief SHA-1 cryptographic hash function
  *
- *  Copyright (C) 2006-2010, Brainspark B.V.
+ *  Copyright (C) 2006-2013, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -27,9 +27,11 @@
 #ifndef POLARSSL_SHA1_H
 #define POLARSSL_SHA1_H
 
+#include "config.h"
+
 #include <string.h>
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(EFIX64) && !defined(EFI32)
 #include <basetsd.h>
 typedef UINT32 uint32_t;
 #else
@@ -37,6 +39,14 @@ typedef UINT32 uint32_t;
 #endif
 
 #define POLARSSL_ERR_SHA1_FILE_IO_ERROR                -0x0076  /**< Read/write error in file. */
+
+#if !defined(POLARSSL_SHA1_ALT)
+// Regular implementation
+//
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * \brief          SHA-1 context structure
@@ -51,10 +61,6 @@ typedef struct
     unsigned char opad[64];     /*!< HMAC: outer padding        */
 }
 sha1_context;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * \brief          SHA-1 context setup
@@ -79,6 +85,21 @@ void sha1_update( sha1_context *ctx, const unsigned char *input, size_t ilen );
  * \param output   SHA-1 checksum result
  */
 void sha1_finish( sha1_context *ctx, unsigned char output[20] );
+
+/* Internal use */
+void sha1_process( sha1_context *ctx, const unsigned char data[64] );
+
+#ifdef __cplusplus
+}
+#endif
+
+#else  /* POLARSSL_SHA1_ALT */
+#include "sha1_alt.h"
+#endif /* POLARSSL_SHA1_ALT */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * \brief          Output = SHA-1( input buffer )

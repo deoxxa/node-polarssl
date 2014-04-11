@@ -1,7 +1,7 @@
 /*
  *  SSL server demonstration program using fork() for handling multiple clients
  *
- *  Copyright (C) 2006-2011, Brainspark B.V.
+ *  Copyright (C) 2006-2013, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -23,9 +23,7 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _CRT_SECURE_NO_DEPRECATE
-#define _CRT_SECURE_NO_DEPRECATE 1
-#endif
+#include "polarssl/config.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -34,10 +32,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <signal.h>
 
-#include "polarssl/config.h"
+#if !defined(_MSC_VER) || defined(EFIX64) || defined(EFI32)
+#include <unistd.h>
+#endif
 
 #include "polarssl/entropy.h"
 #include "polarssl/ctr_drbg.h"
@@ -55,7 +54,8 @@
 #if !defined(POLARSSL_BIGNUM_C) || !defined(POLARSSL_CERTS_C) ||    \
     !defined(POLARSSL_ENTROPY_C) || !defined(POLARSSL_SSL_TLS_C) || \
     !defined(POLARSSL_SSL_SRV_C) || !defined(POLARSSL_NET_C) ||     \
-    !defined(POLARSSL_RSA_C) || !defined(POLARSSL_CTR_DRBG_C)
+    !defined(POLARSSL_RSA_C) || !defined(POLARSSL_CTR_DRBG_C) ||    \
+    !defined(POLARSSL_X509_CRT_PARSE_C) || !defined(POLARSSL_TIMING_C)
 int main( int argc, char *argv[] )
 {
     ((void) argc);
@@ -64,7 +64,8 @@ int main( int argc, char *argv[] )
     printf("POLARSSL_BIGNUM_C and/or POLARSSL_CERTS_C and/or POLARSSL_ENTROPY_C "
            "and/or POLARSSL_SSL_TLS_C and/or POLARSSL_SSL_SRV_C and/or "
            "POLARSSL_NET_C and/or POLARSSL_RSA_C and/or "
-           "POLARSSL_CTR_DRBG_C not defined.\n");
+           "POLARSSL_CTR_DRBG_C and/or POLARSSL_X509_CRT_PARSE_C and/or "
+           "POLARSSL_TIMING_C not defined.\n");
     return( 0 );
 }
 #elif defined(_WIN32)
@@ -81,7 +82,7 @@ int main( int argc, char *argv[] )
 
 #define DEBUG_LEVEL 0
 
-void my_debug( void *ctx, int level, const char *str )
+static void my_debug( void *ctx, int level, const char *str )
 {
     if( level < DEBUG_LEVEL )
     {
@@ -94,15 +95,15 @@ int main( int argc, char *argv[] )
 {
     int ret, len, cnt = 0, pid;
     int listen_fd;
-    int client_fd;
+    int client_fd = -1;
     unsigned char buf[1024];
-    char *pers = "ssl_fork_server";
+    const char *pers = "ssl_fork_server";
 
     entropy_context entropy;
     ctr_drbg_context ctr_drbg;
     ssl_context ssl;
-    x509_cert srvcert;
-    rsa_context rsa;
+    x509_crt srvcert;
+    pk_context pkey;
 
     ((void) argc);
     ((void) argv);
@@ -117,7 +118,8 @@ int main( int argc, char *argv[] )
 
     entropy_init( &entropy );
     if( ( ret = ctr_drbg_init( &ctr_drbg, entropy_func, &entropy,
-                    (unsigned char *) pers, strlen( pers ) ) ) != 0 )
+                               (const unsigned char *) pers,
+                               strlen( pers ) ) ) != 0 )
     {
         printf( " failed\n  ! ctr_drbg_init returned %d\n", ret );
         goto exit;
@@ -131,35 +133,35 @@ int main( int argc, char *argv[] )
     printf( "  . Loading the server cert. and key..." );
     fflush( stdout );
 
-    memset( &srvcert, 0, sizeof( x509_cert ) );
+    x509_crt_init( &srvcert );
 
     /*
      * This demonstration program uses embedded test certificates.
-     * Instead, you may want to use x509parse_crtfile() to read the
-     * server and CA certificates, as well as x509parse_keyfile().
+     * Instead, you may want to use x509_crt_parse_file() to read the
+     * server and CA certificates, as well as pk_parse_keyfile().
      */
-    ret = x509parse_crt( &srvcert, (unsigned char *) test_srv_crt,
-                         strlen( test_srv_crt ) );
+    ret = x509_crt_parse( &srvcert, (const unsigned char *) test_srv_crt,
+                          strlen( test_srv_crt ) );
     if( ret != 0 )
     {
-        printf( " failed\n  !  x509parse_crt returned %d\n\n", ret );
+        printf( " failed\n  !  x509_crt_parse returned %d\n\n", ret );
         goto exit;
     }
 
-    ret = x509parse_crt( &srvcert, (unsigned char *) test_ca_crt,
-                         strlen( test_ca_crt ) );
+    ret = x509_crt_parse( &srvcert, (const unsigned char *) test_ca_list,
+                          strlen( test_ca_list ) );
     if( ret != 0 )
     {
-        printf( " failed\n  !  x509parse_crt returned %d\n\n", ret );
+        printf( " failed\n  !  x509_crt_parse returned %d\n\n", ret );
         goto exit;
     }
 
-    rsa_init( &rsa, RSA_PKCS_V15, 0 );
-    ret =  x509parse_key( &rsa, (unsigned char *) test_srv_key,
+    pk_init( &pkey );
+    ret =  pk_parse_key( &pkey, (const unsigned char *) test_srv_key,
                           strlen( test_srv_key ), NULL, 0 );
     if( ret != 0 )
     {
-        printf( " failed\n  !  x509parse_key returned %d\n\n", ret );
+        printf( " failed\n  !  pk_parse_key returned %d\n\n", ret );
         goto exit;
     }
 
@@ -218,7 +220,8 @@ int main( int argc, char *argv[] )
         if( pid != 0 )
         {
             if( ( ret = ctr_drbg_reseed( &ctr_drbg,
-                                         (unsigned char* ) "parent", 6 ) ) != 0 )
+                                         (const unsigned char *) "parent",
+                                         6 ) ) != 0 )
             {
                 printf( " failed\n  ! ctr_drbg_reseed returned %d\n", ret );
                 goto exit;
@@ -237,7 +240,8 @@ int main( int argc, char *argv[] )
         fflush( stdout );
 
         if( ( ret = ctr_drbg_reseed( &ctr_drbg,
-                                     (unsigned char *) "child", 5 ) ) != 0 )
+                                     (const unsigned char *) "child",
+                                     5 ) ) != 0 )
         {
             printf( " failed\n  ! ctr_drbg_reseed returned %d\n", ret );
             goto exit;
@@ -260,7 +264,7 @@ int main( int argc, char *argv[] )
                            net_send, &client_fd );
 
         ssl_set_ca_chain( &ssl, srvcert.next, NULL, NULL );
-        ssl_set_own_cert( &ssl, &srvcert, &rsa );
+        ssl_set_own_cert( &ssl, &srvcert, &pkey );
 
         /*
          * 5. Handshake
@@ -357,9 +361,10 @@ int main( int argc, char *argv[] )
 exit:
 
     net_close( client_fd );
-    x509_free( &srvcert );
-    rsa_free( &rsa );
+    x509_crt_free( &srvcert );
+    pk_free( &pkey );
     ssl_free( &ssl );
+    entropy_free( &entropy );
 
 #if defined(_WIN32)
     printf( "  Press Enter to exit this program.\n" );

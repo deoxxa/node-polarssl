@@ -1,7 +1,7 @@
 /*
- *  Key reading application
+ *  Key writing application
  *
- *  Copyright (C) 2006-2011, Brainspark B.V.
+ *  Copyright (C) 2006-2013, Brainspark B.V.
  *
  *  This file is part of PolarSSL (http://www.polarssl.org)
  *  Lead Maintainer: Paul Bakker <polarssl_maintainer at polarssl.org>
@@ -23,21 +23,26 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _CRT_SECURE_NO_DEPRECATE
-#define _CRT_SECURE_NO_DEPRECATE 1
-#endif
+#include "polarssl/config.h"
 
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "polarssl/config.h"
-
 #include "polarssl/error.h"
-#include "polarssl/rsa.h"
-#include "polarssl/x509.h"
-#include "polarssl/base64.h"
-#include "polarssl/x509write.h"
+#include "polarssl/pk.h"
+#include "polarssl/error.h"
+
+#if !defined(POLARSSL_PK_WRITE_C) || !defined(POLARSSL_FS_IO)
+int main( int argc, char *argv[] )
+{
+    ((void) argc);
+    ((void) argv);
+
+    printf( "POLARSSL_PK_WRITE_C and/or POLARSSL_FS_IO not defined.\n" );
+    return( 0 );
+}
+#else
 
 #define MODE_NONE               0
 #define MODE_PRIVATE            1
@@ -47,11 +52,15 @@
 #define OUTPUT_MODE_PRIVATE            1
 #define OUTPUT_MODE_PUBLIC             2
 
+#define OUTPUT_FORMAT_PEM              0
+#define OUTPUT_FORMAT_DER              1
+
 #define DFL_MODE                MODE_NONE
 #define DFL_FILENAME            "keyfile.key"
 #define DFL_DEBUG_LEVEL         0
-#define DFL_OUTPUT_MODE          OUTPUT_MODE_NONE
+#define DFL_OUTPUT_MODE         OUTPUT_MODE_NONE
 #define DFL_OUTPUT_FILENAME     "keyfile.pem"
+#define DFL_OUTPUT_FORMAT       OUTPUT_FORMAT_PEM
 
 /*
  * global options
@@ -59,92 +68,83 @@
 struct options
 {
     int mode;                   /* the mode to run the application in   */
-    char *filename;             /* filename of the key file             */
-    int debug_level;            /* level of debugging                   */
+    const char *filename;       /* filename of the key file             */
     int output_mode;            /* the output mode to use               */
-    char *output_file;          /* where to store the constructed key file  */
+    const char *output_file;    /* where to store the constructed key file  */
+    int output_format;          /* the output format to use             */
 } opt;
 
-void my_debug( void *ctx, int level, const char *str )
+static int write_public_key( pk_context *key, const char *output_file )
 {
-    if( level < opt.debug_level )
-    {
-        fprintf( (FILE *) ctx, "%s", str );
-        fflush(  (FILE *) ctx  );
-    }
-}
-
-void write_public_key( rsa_context *rsa, char *output_file )
-{
+    int ret;
     FILE *f;
     unsigned char output_buf[16000];
-    unsigned char base_buf[16000];
-    unsigned char *c;
-    int ret;
-    size_t len = 0, olen = 16000;
+    unsigned char *c = output_buf;
+    size_t len = 0;
 
     memset(output_buf, 0, 16000);
-    ret = x509_write_pubkey_der( output_buf, 16000, rsa );
 
-    if( ret < 0 )
-        return;
-
-    len = ret;
-    c = output_buf + 15999 - len;
-
-    base64_encode( base_buf, &olen, c, len );
-
-    c = base_buf;
-
-    f = fopen( output_file, "w" );
-    fprintf(f, "-----BEGIN PUBLIC KEY-----\n");
-    while (olen)
+    if( opt.output_format == OUTPUT_FORMAT_PEM )
     {
-        int use_len = olen;
-        if (use_len > 64) use_len = 64;
-        fwrite( c, 1, use_len, f );
-        olen -= use_len;
-        c += use_len;
-        fprintf(f, "\n");
+        if( ( ret = pk_write_pubkey_pem( key, output_buf, 16000 ) ) != 0 )
+            return( ret );
+
+        len = strlen( (char *) output_buf );
     }
-    fprintf(f, "-----END PUBLIC KEY-----\n");
+    else
+    {
+        if( ( ret = pk_write_pubkey_der( key, output_buf, 16000 ) ) < 0 )
+            return( ret );
+
+        len = ret;
+        c = output_buf + sizeof(output_buf) - len - 1;
+    }
+
+    if( ( f = fopen( output_file, "w" ) ) == NULL )
+        return( -1 );
+
+    if( fwrite( c, 1, len, f ) != len )
+        return( -1 );
+
     fclose(f);
+
+    return( 0 );
 }
 
-void write_private_key( rsa_context *rsa, char *output_file )
+static int write_private_key( pk_context *key, const char *output_file )
 {
+    int ret;
     FILE *f;
     unsigned char output_buf[16000];
-    unsigned char base_buf[16000];
-    unsigned char *c;
-    int ret;
-    size_t len = 0, olen = 16000;
+    unsigned char *c = output_buf;
+    size_t len = 0;
 
     memset(output_buf, 0, 16000);
-    ret = x509_write_key_der( output_buf, 16000, rsa );
-    if( ret < 0 )
-        return;
-
-    len = ret;
-    c = output_buf + 15999 - len;
-
-    base64_encode( base_buf, &olen, c, len );
-
-    c = base_buf;
-
-    f = fopen( output_file, "w" );
-    fprintf(f, "-----BEGIN RSA PRIVATE KEY-----\n");
-    while (olen)
+    if( opt.output_format == OUTPUT_FORMAT_PEM )
     {
-        int use_len = olen;
-        if (use_len > 64) use_len = 64;
-        fwrite( c, 1, use_len, f );
-        olen -= use_len;
-        c += use_len;
-        fprintf(f, "\n");
+        if( ( ret = pk_write_key_pem( key, output_buf, 16000 ) ) != 0 )
+            return( ret );
+
+        len = strlen( (char *) output_buf );
     }
-    fprintf(f, "-----END RSA PRIVATE KEY-----\n");
+    else
+    {
+        if( ( ret = pk_write_key_der( key, output_buf, 16000 ) ) < 0 )
+            return( ret );
+
+        len = ret;
+        c = output_buf + sizeof(output_buf) - len - 1;
+    }
+
+    if( ( f = fopen( output_file, "w" ) ) == NULL )
+        return( -1 );
+
+    if( fwrite( c, 1, len, f ) != len )
+        return( -1 );
+
     fclose(f);
+
+    return( 0 );
 }
 
 #define USAGE \
@@ -152,27 +152,15 @@ void write_private_key( rsa_context *rsa, char *output_file )
     "\n acceptable parameters:\n"                       \
     "    mode=private|public default: none\n"           \
     "    filename=%%s         default: keyfile.key\n"   \
-    "    debug_level=%%d      default: 0 (disabled)\n"  \
     "    output_mode=private|public default: none\n"    \
-    "    output_file=%%s      defeult: keyfile.pem\n"   \
+    "    output_file=%%s      default: keyfile.pem\n"   \
+    "    output_format=pem|der default: pem\n"          \
     "\n"
 
-#if !defined(POLARSSL_BIGNUM_C) || !defined(POLARSSL_RSA_C) ||         \
-    !defined(POLARSSL_X509_PARSE_C) || !defined(POLARSSL_FS_IO)
-int main( int argc, char *argv[] )
-{
-    ((void) argc);
-    ((void) argv);
-
-    printf("POLARSSL_BIGNUM_C and/or POLARSSL_RSA_C and/or "
-           "POLARSSL_X509_PARSE_C and/or POLARSSL_FS_IO not defined.\n");
-    return( 0 );
-}
-#else
 int main( int argc, char *argv[] )
 {
     int ret = 0;
-    rsa_context rsa;
+    pk_context key;
     char buf[1024];
     int i;
     char *p, *q;
@@ -180,21 +168,22 @@ int main( int argc, char *argv[] )
     /*
      * Set to sane values
      */
-    memset( &rsa, 0, sizeof( rsa_context ) );
-    memset( buf, 0, 1024 );
+    pk_init( &key );
+    memset( buf, 0, sizeof( buf ) );
 
     if( argc == 0 )
     {
     usage:
+        ret = 1;
         printf( USAGE );
         goto exit;
     }
 
     opt.mode                = DFL_MODE;
     opt.filename            = DFL_FILENAME;
-    opt.debug_level         = DFL_DEBUG_LEVEL;
     opt.output_mode         = DFL_OUTPUT_MODE;
     opt.output_file         = DFL_OUTPUT_FILENAME;
+    opt.output_format       = DFL_OUTPUT_FORMAT;
 
     for( i = 1; i < argc; i++ )
     {
@@ -221,16 +210,19 @@ int main( int argc, char *argv[] )
             else
                 goto usage;
         }
+        else if( strcmp( p, "output_format" ) == 0 )
+        {
+            if( strcmp( q, "pem" ) == 0 )
+                opt.output_format = OUTPUT_FORMAT_PEM;
+            else if( strcmp( q, "der" ) == 0 )
+                opt.output_format = OUTPUT_FORMAT_DER;
+            else
+                goto usage;
+        }
         else if( strcmp( p, "filename" ) == 0 )
             opt.filename = q;
         else if( strcmp( p, "output_file" ) == 0 )
             opt.output_file = q;
-        else if( strcmp( p, "debug_level" ) == 0 )
-        {
-            opt.debug_level = atoi( q );
-            if( opt.debug_level < 0 || opt.debug_level > 65535 )
-                goto usage;
-        }
         else
             goto usage;
     }
@@ -255,15 +247,12 @@ int main( int argc, char *argv[] )
         printf( "\n  . Loading the private key ..." );
         fflush( stdout );
 
-        ret = x509parse_keyfile( &rsa, opt.filename, NULL );
+        ret = pk_parse_keyfile( &key, opt.filename, NULL );
 
         if( ret != 0 )
         {
-#ifdef POLARSSL_ERROR_C
-            error_strerror( ret, buf, 1024 );
-#endif
-            printf( " failed\n  !  x509parse_key returned %d - %s\n\n", ret, buf );
-            rsa_free( &rsa );
+            polarssl_strerror( ret, (char *) buf, sizeof(buf) );
+            printf( " failed\n  !  pk_parse_keyfile returned -0x%04x - %s\n\n", -ret, buf );
             goto exit;
         }
 
@@ -273,14 +262,34 @@ int main( int argc, char *argv[] )
          * 1.2 Print the key
          */
         printf( "  . Key information    ...\n" );
-        mpi_write_file( "N:  ", &rsa.N, 16, NULL );
-        mpi_write_file( "E:  ", &rsa.E, 16, NULL );
-        mpi_write_file( "D:  ", &rsa.D, 16, NULL );
-        mpi_write_file( "P:  ", &rsa.P, 16, NULL );
-        mpi_write_file( "Q:  ", &rsa.Q, 16, NULL );
-        mpi_write_file( "DP: ", &rsa.DP, 16, NULL );
-        mpi_write_file( "DQ:  ", &rsa.DQ, 16, NULL );
-        mpi_write_file( "QP:  ", &rsa.QP, 16, NULL );
+
+#if defined(POLARSSL_RSA_C)
+        if( pk_get_type( &key ) == POLARSSL_PK_RSA )
+        {
+            rsa_context *rsa = pk_rsa( key );
+            mpi_write_file( "N:  ",  &rsa->N,  16, NULL );
+            mpi_write_file( "E:  ",  &rsa->E,  16, NULL );
+            mpi_write_file( "D:  ",  &rsa->D,  16, NULL );
+            mpi_write_file( "P:  ",  &rsa->P,  16, NULL );
+            mpi_write_file( "Q:  ",  &rsa->Q,  16, NULL );
+            mpi_write_file( "DP: ",  &rsa->DP, 16, NULL );
+            mpi_write_file( "DQ:  ", &rsa->DQ, 16, NULL );
+            mpi_write_file( "QP:  ", &rsa->QP, 16, NULL );
+        }
+        else
+#endif
+#if defined(POLARSSL_ECP_C)
+        if( pk_get_type( &key ) == POLARSSL_PK_ECKEY )
+        {
+            ecp_keypair *ecp = pk_ec( key );
+            mpi_write_file( "Q(X): ", &ecp->Q.X, 16, NULL );
+            mpi_write_file( "Q(Y): ", &ecp->Q.Y, 16, NULL );
+            mpi_write_file( "Q(Z): ", &ecp->Q.Z, 16, NULL );
+            mpi_write_file( "D   : ", &ecp->d  , 16, NULL );
+        }
+        else
+#endif
+            printf("key type not supported yet\n");
 
     }
     else if( opt.mode == MODE_PUBLIC )
@@ -291,15 +300,12 @@ int main( int argc, char *argv[] )
         printf( "\n  . Loading the public key ..." );
         fflush( stdout );
 
-        ret = x509parse_public_keyfile( &rsa, opt.filename );
+        ret = pk_parse_public_keyfile( &key, opt.filename );
 
         if( ret != 0 )
         {
-#ifdef POLARSSL_ERROR_C
-            error_strerror( ret, buf, 1024 );
-#endif
-            printf( " failed\n  !  x509parse_public_key returned %d - %s\n\n", ret, buf );
-            rsa_free( &rsa );
+            polarssl_strerror( ret, (char *) buf, sizeof(buf) );
+            printf( " failed\n  !  pk_parse_public_key returned -0x%04x - %s\n\n", -ret, buf );
             goto exit;
         }
 
@@ -309,24 +315,53 @@ int main( int argc, char *argv[] )
          * 1.2 Print the key
          */
         printf( "  . Key information    ...\n" );
-        mpi_write_file( "N: ", &rsa.N, 16, NULL );
-        mpi_write_file( "E:  ", &rsa.E, 16, NULL );
+
+#if defined(POLARSSL_RSA_C)
+        if( pk_get_type( &key ) == POLARSSL_PK_RSA )
+        {
+            rsa_context *rsa = pk_rsa( key );
+            mpi_write_file( "N: ", &rsa->N, 16, NULL );
+            mpi_write_file( "E: ", &rsa->E, 16, NULL );
+        }
+        else
+#endif
+#if defined(POLARSSL_ECP_C)
+        if( pk_get_type( &key ) == POLARSSL_PK_ECKEY )
+        {
+            ecp_keypair *ecp = pk_ec( key );
+            mpi_write_file( "Q(X): ", &ecp->Q.X, 16, NULL );
+            mpi_write_file( "Q(Y): ", &ecp->Q.Y, 16, NULL );
+            mpi_write_file( "Q(Z): ", &ecp->Q.Z, 16, NULL );
+        }
+        else
+#endif
+            printf("key type not supported yet\n");
     }
     else
         goto usage;
 
     if( opt.output_mode == OUTPUT_MODE_PUBLIC )
     {
-        write_public_key( &rsa, opt.output_file );
+        write_public_key( &key, opt.output_file );
     }
     if( opt.output_mode == OUTPUT_MODE_PRIVATE )
     {
-        write_private_key( &rsa, opt.output_file );
+        write_private_key( &key, opt.output_file );
     }
 
 exit:
 
-    rsa_free( &rsa );
+    if( ret != 0 && ret != 1)
+    {
+#ifdef POLARSSL_ERROR_C
+        polarssl_strerror( ret, buf, sizeof( buf ) );
+        printf( " - %s\n", buf );
+#else
+        printf("\n");
+#endif
+    }
+
+    pk_free( &key );
 
 #if defined(_WIN32)
     printf( "  + Press Enter to exit this program.\n" );
@@ -335,5 +370,4 @@ exit:
 
     return( ret );
 }
-#endif /* POLARSSL_BIGNUM_C && POLARSSL_RSA_C &&
-          POLARSSL_X509_PARSE_C && POLARSSL_FS_IO */
+#endif /* POLARSSL_X509_WRITE_C && POLARSSL_FS_IO */

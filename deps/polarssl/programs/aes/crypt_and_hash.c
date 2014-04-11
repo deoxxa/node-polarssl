@@ -24,9 +24,7 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _CRT_SECURE_NO_DEPRECATE
-#define _CRT_SECURE_NO_DEPRECATE 1
-#endif
+#include "polarssl/config.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -42,8 +40,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-
-#include "polarssl/config.h"
 
 #include "polarssl/cipher.h"
 #include "polarssl/md.h"
@@ -80,6 +76,7 @@ int main( int argc, char *argv[] )
     unsigned char digest[POLARSSL_MD_MAX_SIZE];
     unsigned char buffer[1024];
     unsigned char output[1024];
+    unsigned char diff;
 
     const cipher_info_t *cipher_info;
     const md_info_t *md_info;
@@ -306,7 +303,12 @@ int main( int argc, char *argv[] )
             fprintf( stderr, "cipher_setkey() returned error\n");
             goto exit;
         }
-        if( cipher_reset( &cipher_ctx, IV ) != 0 )
+        if( cipher_set_iv( &cipher_ctx, IV, 16 ) != 0 )
+        {
+            fprintf( stderr, "cipher_set_iv() returned error\n");
+            goto exit;
+        }
+        if( cipher_reset( &cipher_ctx ) != 0 )
         {
             fprintf( stderr, "cipher_reset() returned error\n");
             goto exit;
@@ -389,7 +391,7 @@ int main( int argc, char *argv[] )
         }
 
         /*
-         * Substract the IV + HMAC length.
+         * Subtract the IV + HMAC length.
          */
         filesize -= ( 16 + md_get_size( md_info ) );
 
@@ -424,7 +426,8 @@ int main( int argc, char *argv[] )
 
         cipher_setkey( &cipher_ctx, digest, cipher_info->key_length,
             POLARSSL_DECRYPT );
-        cipher_reset( &cipher_ctx, IV);
+        cipher_set_iv( &cipher_ctx, IV, 16 );
+        cipher_reset( &cipher_ctx );
 
         md_hmac_starts( &md_ctx, digest, 32 );
 
@@ -453,17 +456,6 @@ int main( int argc, char *argv[] )
         }
 
         /*
-         * Write the final block of data
-         */
-        cipher_finish( &cipher_ctx, output, &olen );
-
-        if( fwrite( output, 1, olen, fout ) != olen )
-        {
-            fprintf( stderr, "fwrite(%ld bytes) failed\n", (long) olen );
-            goto exit;
-        }
-
-        /*
          * Verify the message authentication code.
          */
         md_hmac_finish( &md_ctx, digest );
@@ -474,10 +466,26 @@ int main( int argc, char *argv[] )
             goto exit;
         }
 
-        if( memcmp( digest, buffer, md_get_size( md_info ) ) != 0 )
+        /* Use constant-time buffer comparison */
+        diff = 0;
+        for( i = 0; i < md_get_size( md_info ); i++ )
+            diff |= digest[i] ^ buffer[i];
+
+        if( diff != 0 )
         {
             fprintf( stderr, "HMAC check failed: wrong key, "
                              "or file corrupted.\n" );
+            goto exit;
+        }
+
+        /*
+         * Write the final block of data
+         */
+        cipher_finish( &cipher_ctx, output, &olen );
+
+        if( fwrite( output, 1, olen, fout ) != olen )
+        {
+            fprintf( stderr, "fwrite(%ld bytes) failed\n", (long) olen );
             goto exit;
         }
     }

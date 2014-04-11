@@ -23,13 +23,9 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _CRT_SECURE_NO_DEPRECATE
-#define _CRT_SECURE_NO_DEPRECATE 1
-#endif
+#include "polarssl/config.h"
 
 #include <stdio.h>
-
-#include "polarssl/config.h"
 
 #include "polarssl/bignum.h"
 #include "polarssl/entropy.h"
@@ -43,26 +39,26 @@
 #define GENERATOR "4"
 
 #if !defined(POLARSSL_BIGNUM_C) || !defined(POLARSSL_ENTROPY_C) ||   \
-    !defined(POLARSSL_FS_IO) || !defined(POLARSSL_CTR_DRBG_C)
+    !defined(POLARSSL_FS_IO) || !defined(POLARSSL_CTR_DRBG_C) ||     \
+    !defined(POLARSSL_GENPRIME)
 int main( int argc, char *argv[] )
 {
     ((void) argc);
     ((void) argv);
 
     printf("POLARSSL_BIGNUM_C and/or POLARSSL_ENTROPY_C and/or "
-           "POLARSSL_FS_IO and/or POLARSSL_CTR_DRBG_C not defined.\n");
+           "POLARSSL_FS_IO and/or POLARSSL_CTR_DRBG_C and/or "
+           "POLARSSL_GENPRIME not defined.\n");
     return( 0 );
 }
 #else
 int main( int argc, char *argv[] )
 {
     int ret = 1;
-
-#if defined(POLARSSL_GENPRIME)
     mpi G, P, Q;
     entropy_context entropy;
     ctr_drbg_context ctr_drbg;
-    char *pers = "dh_genprime";
+    const char *pers = "dh_genprime";
     FILE *fout;
 
     ((void) argc);
@@ -78,12 +74,15 @@ int main( int argc, char *argv[] )
     printf( "         predefined DHM parameters from dhm.h instead!\n\n" );
     printf( "============================================================\n\n" );
 
+    printf( "  ! Generating large primes may take minutes!\n" );
+
     printf( "\n  . Seeding the random number generator..." );
     fflush( stdout );
 
     entropy_init( &entropy );
     if( ( ret = ctr_drbg_init( &ctr_drbg, entropy_func, &entropy,
-                               (unsigned char *) pers, strlen( pers ) ) ) != 0 )
+                               (const unsigned char *) pers,
+                               strlen( pers ) ) ) != 0 )
     {
         printf( " failed\n  ! ctr_drbg_init returned %d\n", ret );
         goto exit;
@@ -146,9 +145,7 @@ int main( int argc, char *argv[] )
 exit:
 
     mpi_free( &G ); mpi_free( &P ); mpi_free( &Q );
-#else
-    printf( "\n  ! Prime-number generation is not available.\n\n" );
-#endif
+    entropy_free( &entropy );
 
 #if defined(_WIN32)
     printf( "  Press Enter to exit this program.\n" );
@@ -158,4 +155,4 @@ exit:
     return( ret );
 }
 #endif /* POLARSSL_BIGNUM_C && POLARSSL_ENTROPY_C && POLARSSL_FS_IO &&
-          POLARSSL_CTR_DRBG_C */
+          POLARSSL_CTR_DRBG_C && POLARSSL_GENPRIME */
