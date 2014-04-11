@@ -36,6 +36,6 @@ PolarSSL is licensed under the GPLv2.
 Contact
 -------
 
-* GitHub ([http://github.com/deoxxa](deoxxa))
-* Twitter ([http://twitter.com/deoxxa](@deoxxa))
-* Email ([mailto:deoxxa@fknsrs.biz](deoxxa@fknsrs.biz))
+* GitHub ([deoxxa](http://github.com/deoxxa))
+* Twitter ([@deoxxa](http://twitter.com/deoxxa))
+* Email ([deoxxa@fknsrs.biz](mailto:deoxxa@fknsrs.biz))
