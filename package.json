@@ -9,7 +9,10 @@
   },
   "url": "http://github.com/deoxxa/node-polarssl",
   "license": "BSD",
-  "repository": { "type":"git", "url":"git://github.com/deoxxa/node-polarssl.git" },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/deoxxa/node-polarssl.git"
+  },
   "keywords": [
     "polarssl",
     "crypto",
@@ -20,5 +23,8 @@
   "main": "./polarssl",
   "scripts": {
     "install": "node-gyp rebuild"
+  },
+  "dependencies": {
+    "nan": "^0.8.0"
   }
 }
