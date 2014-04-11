@@ -11,10 +11,8 @@ polarssl.rsa_gen_key(1024, function(err, key) {
     return console.log(err);
   }
 
-  console.log(key);
-
-  console.log(key.private.toString());
-  console.log(key.public.toString());
+  console.log(key.private);
+  console.log(key.public);
 });
 
 console.log("after generation call");
