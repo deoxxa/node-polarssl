@@ -1,3 +1,5 @@
+#include <polarssl/error.h>
+
 #include "hash.h"
 
 int PolarSSL::Hash::Initialise(const char* md_name) {
@@ -7,20 +9,18 @@ int PolarSSL::Hash::Initialise(const char* md_name) {
 
   md_info = md_info_from_string(md_name);
   if (md_info == NULL) {
-    err = "no such hash found";
+    errstr = "no such hash type found";
     return 1;
   }
 
   rc = md_init_ctx(&md_ctx, md_info);
   if (rc != 0) {
-    err = "error initiaising hash context";
-    return 1;
+    return rc;
   }
 
   rc = md_starts(&md_ctx);
   if (rc != 0) {
-    err = "error starting hash context";
-    return 1;
+    return rc;
   }
 
   return 0;
@@ -50,8 +50,15 @@ NAN_METHOD(PolarSSL::Hash::New) {
   int rc = hash->Initialise(md_name);
   delete[] md_name;
 
+  char err[1024];
+
   if (rc != 0) {
-    NanThrowError(hash->err);
+    if (hash->errstr) {
+      NanThrowError(hash->errstr);
+    } else {
+      polarssl_strerror(rc, err, sizeof(err));
+      NanThrowError(err);
+    }
     NanReturnUndefined();
   }
 
@@ -65,6 +72,8 @@ NAN_METHOD(PolarSSL::Hash::Update) {
 
   Hash* hash = node::ObjectWrap::Unwrap<Hash>(args.This());
 
+  char err[1024];
+
   v8::Local<v8::Value> buffer = args[0]->ToObject();
 
   if (!node::Buffer::HasInstance(buffer)) {
@@ -75,7 +84,8 @@ NAN_METHOD(PolarSSL::Hash::Update) {
   int rc = md_update(&(hash->md_ctx), reinterpret_cast<unsigned char*>(node::Buffer::Data(buffer)), node::Buffer::Length(buffer));
 
   if (rc != 0) {
-    NanThrowError("error processing data to be hashed");
+    polarssl_strerror(rc, err, sizeof(err));
+    NanThrowError(err);
     NanReturnUndefined();
   }
 
@@ -87,10 +97,13 @@ NAN_METHOD(PolarSSL::Hash::Digest) {
 
   Hash* hash = node::ObjectWrap::Unwrap<Hash>(args.This());
 
+  char err[1024];
+
   int rc = md_finish(&(hash->md_ctx), hash->sum);
 
   if (rc != 0) {
-    NanThrowError("error calculating final digest");
+    polarssl_strerror(rc, err, sizeof(err));
+    NanThrowError(err);
     NanReturnUndefined();
   }
 
