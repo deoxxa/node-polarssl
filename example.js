@@ -2,17 +2,10 @@
 
 var polarssl = require("./polarssl");
 
-console.log("before generation call");
+var hash = polarssl.createHash("sha1");
 
-polarssl.rsa_gen_key(1024, function(err, key) {
-  console.log("in callback");
+hash.update(Buffer("password"));
 
-  if (err) {
-    return console.log(err);
-  }
+var digest = hash.digest();
 
-  console.log(key.private);
-  console.log(key.public);
-});
-
-console.log("after generation call");
+console.log(digest.toString("hex"));
