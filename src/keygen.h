@@ -14,7 +14,7 @@ namespace PolarSSL {
     static void Init(v8::Handle<v8::Object> target);
 
   private:
-    Keygen() : errstr(NULL) {}
+    Keygen() {}
     ~Keygen() {}
 
     int Initialise();
@@ -22,7 +22,6 @@ namespace PolarSSL {
     static NAN_METHOD(New);
     static NAN_METHOD(GenerateKey);
 
-    const char* errstr;
     entropy_context entropy;
     ctr_drbg_context ctr_drbg;
   };

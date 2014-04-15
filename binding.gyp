@@ -9,6 +9,7 @@
         "src/polarssl.cc",
         "src/hash.cc",
         "src/keygen.cc",
+        "src/key-rsa.cc",
       ],
       "dependencies": [
         "./deps/polarssl/binding.gyp:polarssl",

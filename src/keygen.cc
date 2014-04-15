@@ -1,5 +1,7 @@
 #include <polarssl/error.h>
 
+#include "key-rsa.h"
+
 #include "keygen.h"
 
 int PolarSSL::Keygen::Initialise() {
@@ -59,8 +61,9 @@ NAN_METHOD(PolarSSL::Keygen::GenerateKey) {
 
   Keygen* keygen = node::ObjectWrap::Unwrap<Keygen>(args.This());
 
-  pk_context* pk_ctx = new pk_context;
-  memset(pk_ctx, 0, sizeof(pk_context));
+  v8::Handle<v8::Object> keyObject = KeyRSA::NewInstance();
+
+  KeyRSA* key = node::ObjectWrap::Unwrap<KeyRSA>(keyObject);
 
   const pk_info_t* pk_info = pk_info_from_type(POLARSSL_PK_RSA);
   if (pk_info == NULL) {
@@ -68,111 +71,12 @@ NAN_METHOD(PolarSSL::Keygen::GenerateKey) {
     NanReturnUndefined();
   }
 
-  rc = pk_init_ctx(pk_ctx, pk_info);
+  rc = rsa_gen_key(&(key->ctx), ctr_drbg_random, &(keygen->ctr_drbg), 1024, 65537);
   if (rc != 0) {
     polarssl_strerror(rc, err, sizeof(err));
     NanThrowError(err);
     NanReturnUndefined();
   }
 
-  rc = rsa_gen_key(pk_rsa(*pk_ctx), ctr_drbg_random, &(keygen->ctr_drbg), 1024, 65537);
-  if (rc != 0) {
-    polarssl_strerror(rc, err, sizeof(err));
-    NanThrowError(err);
-    NanReturnUndefined();
-  }
-
-  rsa_context *rsa = pk_rsa(*pk_ctx);
-
-  v8::Local<v8::Object> obj = v8::Object::New();
-
-  size_t slen;
-  char* buf = NULL;
-
-  slen = 0;
-  rc = mpi_write_string(&(rsa->N), 10, NULL, &slen);
-  if (rc != 0 && rc != POLARSSL_ERR_MPI_BUFFER_TOO_SMALL) {
-    polarssl_strerror(rc, err, sizeof(err));
-    NanThrowError(err);
-    NanReturnUndefined();
-  }
-  buf = new char[slen];
-  rc = mpi_write_string(&(rsa->N), 10, buf, &slen);
-  if (rc != 0) {
-    polarssl_strerror(rc, err, sizeof(err));
-    NanThrowError(err);
-    NanReturnUndefined();
-  }
-  buf[slen] = 0;
-  obj->Set(v8::String::NewSymbol("n"), v8::String::New(buf));
-
-  slen = 0;
-  rc = mpi_write_string(&(rsa->E), 10, NULL, &slen);
-  if (rc != 0 && rc != POLARSSL_ERR_MPI_BUFFER_TOO_SMALL) {
-    polarssl_strerror(rc, err, sizeof(err));
-    NanThrowError(err);
-    NanReturnUndefined();
-  }
-  buf = new char[slen];
-  rc = mpi_write_string(&(rsa->E), 10, buf, &slen);
-  if (rc != 0) {
-    polarssl_strerror(rc, err, sizeof(err));
-    NanThrowError(err);
-    NanReturnUndefined();
-  }
-  buf[slen] = 0;
-  obj->Set(v8::String::NewSymbol("e"), v8::String::New(buf));
-
-  slen = 0;
-  rc = mpi_write_string(&(rsa->D), 10, NULL, &slen);
-  if (rc != 0 && rc != POLARSSL_ERR_MPI_BUFFER_TOO_SMALL) {
-    polarssl_strerror(rc, err, sizeof(err));
-    NanThrowError(err);
-    NanReturnUndefined();
-  }
-  buf = new char[slen];
-  rc = mpi_write_string(&(rsa->D), 10, buf, &slen);
-  if (rc != 0) {
-    polarssl_strerror(rc, err, sizeof(err));
-    NanThrowError(err);
-    NanReturnUndefined();
-  }
-  buf[slen] = 0;
-  obj->Set(v8::String::NewSymbol("d"), v8::String::New(buf));
-
-  slen = 0;
-  rc = mpi_write_string(&(rsa->P), 10, NULL, &slen);
-  if (rc != 0 && rc != POLARSSL_ERR_MPI_BUFFER_TOO_SMALL) {
-    polarssl_strerror(rc, err, sizeof(err));
-    NanThrowError(err);
-    NanReturnUndefined();
-  }
-  buf = new char[slen];
-  rc = mpi_write_string(&(rsa->P), 10, buf, &slen);
-  if (rc != 0) {
-    polarssl_strerror(rc, err, sizeof(err));
-    NanThrowError(err);
-    NanReturnUndefined();
-  }
-  buf[slen] = 0;
-  obj->Set(v8::String::NewSymbol("p"), v8::String::New(buf));
-
-  slen = 0;
-  rc = mpi_write_string(&(rsa->Q), 10, NULL, &slen);
-  if (rc != 0 && rc != POLARSSL_ERR_MPI_BUFFER_TOO_SMALL) {
-    polarssl_strerror(rc, err, sizeof(err));
-    NanThrowError(err);
-    NanReturnUndefined();
-  }
-  buf = new char[slen];
-  rc = mpi_write_string(&(rsa->Q), 10, buf, &slen);
-  if (rc != 0) {
-    polarssl_strerror(rc, err, sizeof(err));
-    NanThrowError(err);
-    NanReturnUndefined();
-  }
-  buf[slen] = 0;
-  obj->Set(v8::String::NewSymbol("q"), v8::String::New(buf));
-
-  NanReturnValue(obj);
+  NanReturnValue(keyObject);
 }
