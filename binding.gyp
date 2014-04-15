@@ -8,6 +8,7 @@
       "sources": [
         "src/polarssl.cc",
         "src/hash.cc",
+        "src/keygen.cc",
       ],
       "dependencies": [
         "./deps/polarssl/binding.gyp:polarssl",
