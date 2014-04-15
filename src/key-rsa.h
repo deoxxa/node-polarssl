@@ -23,6 +23,7 @@ namespace PolarSSL {
     int Initialise();
 
     static NAN_METHOD(New);
+    static NAN_METHOD(Format);
     static NAN_GETTER(GetN);
     static NAN_SETTER(SetN);
     static NAN_GETTER(GetE);

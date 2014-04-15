@@ -2,10 +2,20 @@
 
 var polarssl = require("./polarssl");
 
-var hash = polarssl.createHash("sha1");
+var keygen = polarssl.createKeygen();
 
-hash.update(Buffer("password"));
+var key = keygen.generateKey();
 
-var digest = hash.digest();
+console.log(JSON.stringify([
+  key.n,
+  key.e,
+  key.d,
+  key.p,
+  key.q,
+  key.dp,
+  key.dq,
+  key.qp,
+], null, 2));
 
-console.log(digest.toString("hex"));
+console.log(key.format("public"));
+console.log(key.format("private"));

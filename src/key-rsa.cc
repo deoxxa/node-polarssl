@@ -1,3 +1,4 @@
+#include <polarssl/pk.h>
 #include <polarssl/error.h>
 
 #include "key-rsa.h"
@@ -18,6 +19,8 @@ void PolarSSL::KeyRSA::Init(v8::Handle<v8::Object> target) {
   constructorTemplate->SetClassName(v8::String::NewSymbol("KeyRSA"));
 
   constructorTemplate->InstanceTemplate()->SetInternalFieldCount(1);
+
+  constructorTemplate->PrototypeTemplate()->Set(v8::String::NewSymbol("format"), v8::FunctionTemplate::New(Format)->GetFunction());
 
   constructorTemplate->PrototypeTemplate()->SetAccessor(NanSymbol("n"), PolarSSL::KeyRSA::GetN, PolarSSL::KeyRSA::SetN);
   constructorTemplate->PrototypeTemplate()->SetAccessor(NanSymbol("e"), PolarSSL::KeyRSA::GetE, PolarSSL::KeyRSA::SetE);
@@ -57,6 +60,68 @@ v8::Handle<v8::Object> PolarSSL::KeyRSA::NewInstance() {
   NanScope();
 
   NanReturnValue(constructor->NewInstance(0, NULL));
+}
+
+NAN_METHOD(PolarSSL::KeyRSA::Format) {
+  NanScope();
+
+  char err[1024];
+
+  int rc;
+
+  KeyRSA* key = node::ObjectWrap::Unwrap<KeyRSA>(args.This());
+
+  const pk_info_t* pk_info = pk_info_from_type(POLARSSL_PK_RSA);
+  if (pk_info == NULL) {
+    NanThrowError("couldn't get pk_info for some reason");
+    NanReturnUndefined();
+  }
+
+  pk_context ctx;
+
+  ctx.pk_info = pk_info;
+  ctx.pk_ctx = &(key->ctx);
+
+  unsigned char buf[65536];
+  memset(buf, 0, 65536);
+
+  int keyPart = 0;
+
+  if (args.Length() >= 1) {
+    size_t keyPartStringLength = 0;
+    char* keyPartString = NanCString(args[0]->ToString(), &keyPartStringLength);
+
+    if (strcmp(keyPartString, "public") == 0) {
+      keyPart = 1;
+    } else if (strcmp(keyPartString, "private") == 0) {
+      keyPart = 2;
+    } else {
+      delete[] keyPartString;
+
+      NanThrowError("first argument must be `public' or `private'");
+      NanReturnUndefined();
+    }
+
+    delete[] keyPartString;
+  } else {
+    keyPart = 1;
+  }
+
+  if (keyPart == 1) {
+    rc = pk_write_pubkey_pem(&ctx, buf, sizeof(buf));
+  } else {
+    rc = pk_write_key_pem(&ctx, buf, sizeof(buf));
+  }
+
+  if (rc != 0) {
+    polarssl_strerror(rc, err, sizeof(err));
+    NanThrowError(err);
+    NanReturnUndefined();
+  }
+
+  v8::Local<v8::String> str = v8::String::New(reinterpret_cast<char*>(buf));
+
+  NanReturnValue(str);
 }
 
 NAN_GETTER(PolarSSL::KeyRSA::GetN) {
