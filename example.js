@@ -19,3 +19,7 @@ console.log(JSON.stringify([
 
 console.log(key.format("public"));
 console.log(key.format("private"));
+
+var data = polarssl.randomBytes(65536);
+
+console.log(data.length);
