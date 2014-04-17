@@ -7,23 +7,38 @@ crypto library.
 Overview
 --------
 
-I want to make certs and stuff. PolarSSL is cool.
+PolarSSL is a lot easier to reason about than OpenSSL, and has a nicer API that
+can be exposed in node with less abstraction. Hopefully this module will be able
+to form the base of an alternative for the built-in `crypto` and `tls` modules.
+
+Warning
+-------
+
+Right now everything here is very very fluid. API's might change with a moment's
+notice, and the version of this module on npm will likely be out of date. Please
+clone directly from git://github.com/deoxxa/node-polarssl.git if you want to see
+how things are doing.
 
 Functionality
 -------------
 
-### rsa_gen
+### polarssl.createHash
 
-```js
-polarssl.rsa_gen(1024, function(err, key) {
-  if (err) {
-    return console.log(err);
-  }
+### polarssl.Hash
 
-  console.log(key.private);
-  console.log(key.public);
-});
-```
+### polarssl.Hash.update
+
+### polarssl.Hash.Digest
+
+### polarssl.createKeygen
+
+### polarssl.Keygen
+
+### polarssl.Keygen.generateKey
+
+### polarssl.KeyRSA
+
+### polarssl.randomBytes
 
 License
 -------
@@ -31,7 +46,7 @@ License
 All original code is licensed under a 3-clause BSD license. A copy is included
 with the source.
 
-PolarSSL is licensed under the GPLv2.
+PolarSSL is licensed under GPLv2.
 
 Contact
 -------
