@@ -10,6 +10,7 @@
         "src/hash.cc",
         "src/keygen.cc",
         "src/key-rsa.cc",
+        "src/random.cc",
       ],
       "dependencies": [
         "./deps/polarssl/binding.gyp:polarssl",
