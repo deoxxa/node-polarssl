@@ -38,6 +38,8 @@ Functionality
 
 ### polarssl.KeyRSA
 
+### polarssl.KeyRSA.format
+
 ### polarssl.randomBytes
 
 License
