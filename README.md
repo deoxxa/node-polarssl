@@ -61,7 +61,7 @@ var keygen = new polarssl.Keygen();
 ### polarssl.Keygen.generateKey
 
 ```js
-var key = polarssl.generateKey();
+var key = keygen.generateKey();
 ```
 
 ### polarssl.KeyRSA
