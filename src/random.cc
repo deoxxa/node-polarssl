@@ -31,11 +31,16 @@ NAN_METHOD(PolarSSL::Random::RandomBytes) {
 
   unsigned char* data = new unsigned char[bytes];
 
-  rc = ctr_drbg_random(&ctr_drbg, data, bytes);
-  if (rc != 0) {
-    polarssl_strerror(rc, err, sizeof(err));
-    NanThrowError(err);
-    NanReturnUndefined();
+  int chunkSize = 768;
+
+  for (int i=0;i<bytes;i+=chunkSize) {
+    rc = ctr_drbg_random(&ctr_drbg, data + i, (chunkSize < (bytes - i)) ? chunkSize : (bytes - i));
+
+    if (rc != 0) {
+      polarssl_strerror(rc, err, sizeof(err));
+      NanThrowError(err);
+      NanReturnUndefined();
+    }
   }
 
   NanReturnValue(NanNewBufferHandle(reinterpret_cast<char*>(data), bytes));
