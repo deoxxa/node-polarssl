@@ -28,7 +28,7 @@ Functionality
 
 ### polarssl.Hash.update
 
-### polarssl.Hash.Digest
+### polarssl.Hash.digest
 
 ### polarssl.createKeygen
 
