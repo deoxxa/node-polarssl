@@ -24,23 +24,63 @@ Functionality
 
 ### polarssl.createHash
 
+```js
+var hash = polarssl.createHash("md5");
+```
+
 ### polarssl.Hash
+
+```js
+var hash = new polarssl.Hash("md5");
+```
 
 ### polarssl.Hash.update
 
+```js
+hash.update(Buffer("this is some data"));
+```
+
 ### polarssl.Hash.digest
+
+```js
+var digest = hash.digest();
+```
 
 ### polarssl.createKeygen
 
+```js
+var keygen = polarssl.createKeygen();
+```
+
 ### polarssl.Keygen
+
+```js
+var keygen = new polarssl.Keygen();
+```
 
 ### polarssl.Keygen.generateKey
 
+```js
+var key = polarssl.generateKey();
+```
+
 ### polarssl.KeyRSA
+
+```js
+var key = new polarssl.KeyRSA();
+```
 
 ### polarssl.KeyRSA.format
 
+```js
+var pem = key.format();
+```
+
 ### polarssl.randomBytes
+
+```js
+var data = polarssl.randomBytes(100);
+```
 
 License
 -------
