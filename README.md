@@ -28,6 +28,54 @@ in this module doesn't behave as specified in the official docs, it's a bug.
 There are some additional methods as well, so read through this list for the
 whole story.
 
+### polarssl.createCipher
+
+```js
+var hash = polarssl.createCipher("ARC4-128", key=Buffer("..."), iv=Buffer("..."), mode=0);
+```
+
+### polarssl.Cipher
+
+This is a duplex stream - write cleartext in, get ciphertext out.
+
+```js
+var cipher = new polarssl.Cipher("md5");
+```
+
+### polarssl.Cipher.update
+
+```js
+cipher.update(Buffer("this is some data"));
+```
+
+### polarssl.Cipher.updateAsync
+
+```js
+cipher.updateAsync(Buffer("this is some data"), function(err) {
+  if (err) {
+    return console.warn(err);
+  }
+});
+```
+
+### polarssl.Cipher.final
+
+```js
+var data = cipher.final();
+```
+
+### polarssl.Cipher.finalAsync
+
+```js
+cipher.finalAsync(function(err, data) {
+  if (err) {
+    return console.warn(err);
+  }
+
+  console.log(data);
+});
+```
+
 ### polarssl.createHash
 
 ```js
