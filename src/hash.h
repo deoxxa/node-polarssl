@@ -18,7 +18,7 @@ namespace PolarSSL {
     Hash() : errstr(NULL) {}
     ~Hash() {}
 
-    int Initialise(const char* md_name);
+    int Initialise(const char* name);
 
     static NAN_METHOD(New);
     static NAN_METHOD(Update);
@@ -32,12 +32,12 @@ namespace PolarSSL {
 
   class HashUpdateWorker : public NanAsyncWorker {
   public:
-    HashUpdateWorker(NanCallback* callback, Hash* hash, char* data, size_t data_length) : NanAsyncWorker(callback),hash(hash),data(data),data_length(data_length) {}
+    HashUpdateWorker(NanCallback* callback, Hash* hash, const char* data, size_t data_length) : NanAsyncWorker(callback),hash(hash),data(data),data_length(data_length) {}
     ~HashUpdateWorker() {}
     void Execute();
   private:
     Hash* hash;
-    char* data;
+    const char* data;
     size_t data_length;
   };
 

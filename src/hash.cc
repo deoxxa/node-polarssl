@@ -2,12 +2,12 @@
 
 #include "hash.h"
 
-int PolarSSL::Hash::Initialise(const char* md_name) {
+int PolarSSL::Hash::Initialise(const char* name) {
   int rc;
 
   memset(&md_ctx, 0, sizeof(md_context_t));
 
-  md_info = md_info_from_string(md_name);
+  md_info = md_info_from_string(name);
   if (md_info == NULL) {
     errstr = "no such hash type found";
     return 1;
@@ -85,7 +85,7 @@ NAN_METHOD(PolarSSL::Hash::Update) {
     NanReturnUndefined();
   }
 
-  int rc = md_update(&(hash->md_ctx), reinterpret_cast<unsigned char*>(node::Buffer::Data(buffer)), node::Buffer::Length(buffer));
+  int rc = md_update(&(hash->md_ctx), reinterpret_cast<const unsigned char*>(node::Buffer::Data(buffer)), node::Buffer::Length(buffer));
 
   if (rc != 0) {
     polarssl_strerror(rc, err, sizeof(err));
@@ -122,7 +122,7 @@ NAN_METHOD(PolarSSL::Hash::UpdateAsync) {
 void PolarSSL::HashUpdateWorker::Execute() {
   // char err[1024];
 
-  int rc = md_update(&(hash->md_ctx), reinterpret_cast<unsigned char*>(data), data_length);
+  int rc = md_update(&(hash->md_ctx), reinterpret_cast<const unsigned char*>(data), data_length);
 
   if (rc != 0) {
     // polarssl_strerror(rc, err, sizeof(err));
