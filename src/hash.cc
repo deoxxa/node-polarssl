@@ -41,6 +41,8 @@ void PolarSSL::Hash::Init(v8::Handle<v8::Object> target) {
   v8::Persistent<v8::Function> constructor = v8::Persistent<v8::Function>::New(constructorTemplate->GetFunction());
 
   target->Set(v8::String::NewSymbol("Hash"), constructor);
+
+  target->Set(v8::String::NewSymbol("getHashes"), v8::FunctionTemplate::New(GetHashes)->GetFunction());
 }
 
 NAN_METHOD(PolarSSL::Hash::New) {
@@ -179,4 +181,36 @@ void PolarSSL::HashDigestWorker::HandleOKCallback() {
   };
 
   callback->Call(2, argv);
+}
+
+NAN_METHOD(PolarSSL::Hash::GetHashes) {
+  NanScope();
+
+  const int* digestTypes = md_list();
+  int i;
+
+  for (i=0;digestTypes[i]!=0;++i) {}
+
+  v8::Handle<v8::Array> array = v8::Array::New(i);
+
+  const md_info_t* info;
+  const char* name;
+
+  for (i=0;digestTypes[i]!=0;++i) {
+    info = md_info_from_type(static_cast<md_type_t>(digestTypes[i]));
+    if (info == NULL) {
+      NanThrowError("error getting type info");
+      NanReturnUndefined();
+    }
+
+    name = md_get_name(info);
+    if (name == NULL) {
+      NanThrowError("error getting name from type");
+      NanReturnUndefined();
+    }
+
+    array->Set(i, v8::String::New(name));
+  }
+
+  NanReturnValue(array);
 }

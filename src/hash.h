@@ -26,6 +26,7 @@ namespace PolarSSL {
     static NAN_METHOD(UpdateAsync);
     static NAN_METHOD(Digest);
     static NAN_METHOD(DigestAsync);
+    static NAN_METHOD(GetHashes);
 
     const char* errstr;
   };

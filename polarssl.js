@@ -2,6 +2,7 @@ var _polarssl = require("./build/Release/polarssl");
 
 var polarssl = module.exports = {
   Hash: require("./lib/hash"),
+  getHashes: _polarssl.getHashes,
   Keygen: _polarssl.Keygen,
   KeyRSA: _polarssl.KeyRSA,
   Random: _polarssl.Random,
