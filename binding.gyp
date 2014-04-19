@@ -7,6 +7,7 @@
       ],
       "sources": [
         "src/polarssl.cc",
+        "src/cipher.cc",
         "src/hash.cc",
         "src/hmac.cc",
         "src/keygen.cc",

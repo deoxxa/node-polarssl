@@ -1,5 +1,6 @@
 #include <node.h>
 
+#include "cipher.h"
 #include "hash.h"
 #include "hmac.h"
 #include "keygen.h"
@@ -7,6 +8,7 @@
 #include "random.h"
 
 void InitAll(v8::Handle<v8::Object> exports) {
+  PolarSSL::Cipher::Init(exports);
   PolarSSL::Hash::Init(exports);
   PolarSSL::HMAC::Init(exports);
   PolarSSL::Keygen::Init(exports);
