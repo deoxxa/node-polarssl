@@ -48,10 +48,32 @@ var hash = new polarssl.Hash("md5");
 hash.update(Buffer("this is some data"));
 ```
 
+### polarssl.Hash.updateAsync
+
+```js
+hash.updateAsync(Buffer("this is some data"), function(err) {
+  if (err) {
+    return console.warn(err);
+  }
+});
+```
+
 ### polarssl.Hash.digest
 
 ```js
 var digest = hash.digest();
+```
+
+### polarssl.Hash.digestAsync
+
+```js
+hash.digestAsync(function(err, digest) {
+  if (err) {
+    return console.warn(err);
+  }
+
+  console.log(digest);
+});
 ```
 
 ### polarssl.createHMAC
@@ -74,10 +96,32 @@ var hmac = new polarssl.HMAC("md5", "whatever");
 hmac.update(Buffer("this is some data"));
 ```
 
+### polarssl.HMAC.updateAsync
+
+```js
+hmac.updateAsync(Buffer("this is some data"), function(err) {
+  if (err) {
+    return console.warn(err);
+  }
+});
+```
+
 ### polarssl.HMAC.digest
 
 ```js
 var digest = hmac.digest();
+```
+
+### polarssl.HMAC.digestAsync
+
+```js
+hmac.digestAsync(function(err, digest) {
+  if (err) {
+    return console.warn(err);
+  }
+
+  console.log(digest);
+});
 ```
 
 ### polarssl.createKeygen
