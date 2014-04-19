@@ -25,6 +25,7 @@
     "install": "node-gyp rebuild"
   },
   "dependencies": {
-    "nan": "^0.8.0"
+    "nan": "^0.8.0",
+    "readable-stream": "^1.0.27-1"
   }
 }
