@@ -22,6 +22,12 @@ how things are doing.
 Functionality
 -------------
 
+Most of this stuff mirrors the core [crypto api](http://nodejs.org/docs/latest/api/crypto.html),
+so take a look at the official docs for more details. If an implemented method
+in this module doesn't behave as specified in the official docs, it's a bug.
+There are some additional methods as well, so read through this list for the
+whole story.
+
 ### polarssl.createHash
 
 ```js
@@ -29,6 +35,8 @@ var hash = polarssl.createHash("md5");
 ```
 
 ### polarssl.Hash
+
+This is a duplex stream - write data in, get digest out on `end()`.
 
 ```js
 var hash = new polarssl.Hash("md5");
@@ -44,6 +52,32 @@ hash.update(Buffer("this is some data"));
 
 ```js
 var digest = hash.digest();
+```
+
+### polarssl.createHMAC
+
+```js
+var hmac = polarssl.createHMAC("md5", "whatever");
+```
+
+### polarssl.HMAC
+
+This is a duplex stream - write data in, get digest out on `end()`.
+
+```js
+var hmac = new polarssl.HMAC("md5", "whatever");
+```
+
+### polarssl.HMAC.update
+
+```js
+hmac.update(Buffer("this is some data"));
+```
+
+### polarssl.HMAC.digest
+
+```js
+var digest = hmac.digest();
 ```
 
 ### polarssl.createKeygen
