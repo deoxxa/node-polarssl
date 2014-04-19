@@ -50,9 +50,12 @@ NAN_METHOD(PolarSSL::Hash::New) {
 
   Hash* hash = new PolarSSL::Hash();
 
-  char* md_name = NanFromV8String(args[0]->ToString());
-  int rc = hash->Initialise(md_name);
-  delete[] md_name;
+  size_t name_length;
+  char* name = NanCString(args[0]->ToString(), &name_length);
+
+  int rc = hash->Initialise(name);
+
+  delete[] name;
 
   char err[1024];
 
