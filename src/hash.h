@@ -11,6 +11,10 @@ namespace PolarSSL {
   public:
     static void Init(v8::Handle<v8::Object> target);
 
+    const md_info_t* md_info;
+    md_context_t md_ctx;
+    unsigned char sum[POLARSSL_MD_MAX_SIZE];
+
   private:
     Hash() : errstr(NULL) {}
     ~Hash() {}
@@ -19,12 +23,32 @@ namespace PolarSSL {
 
     static NAN_METHOD(New);
     static NAN_METHOD(Update);
+    static NAN_METHOD(UpdateAsync);
     static NAN_METHOD(Digest);
+    static NAN_METHOD(DigestAsync);
 
     const char* errstr;
-    const md_info_t* md_info;
-    md_context_t md_ctx;
-    unsigned char sum[POLARSSL_MD_MAX_SIZE];
+  };
+
+  class HashUpdateWorker : public NanAsyncWorker {
+  public:
+    HashUpdateWorker(NanCallback* callback, Hash* hash, char* data, size_t data_length) : NanAsyncWorker(callback),hash(hash),data(data),data_length(data_length) {}
+    ~HashUpdateWorker() {}
+    void Execute();
+  private:
+    Hash* hash;
+    char* data;
+    size_t data_length;
+  };
+
+  class HashDigestWorker : public NanAsyncWorker {
+  public:
+    HashDigestWorker(NanCallback* callback, Hash* hash) : NanAsyncWorker(callback),hash(hash) {}
+    ~HashDigestWorker() {}
+    void Execute();
+    void HandleOKCallback();
+  private:
+    Hash* hash;
   };
 };
 
