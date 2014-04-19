@@ -2,6 +2,7 @@ var _polarssl = require("./build/Release/polarssl");
 
 var polarssl = module.exports = {
   Cipher: require("./lib/cipher"),
+  Decipher: require("./lib/decipher"),
   getCiphers: _polarssl.getCiphers,
   Hash: require("./lib/hash"),
   HMAC: require("./lib/hmac"),
@@ -11,8 +12,12 @@ var polarssl = module.exports = {
   Random: _polarssl.Random,
 };
 
-polarssl.createCipher = function createHash(name, key, iv, operation) {
-  return new polarssl.Cipher(name, key, iv, operation);
+polarssl.createCipher = function createCipher(name, key, iv) {
+  return new polarssl.Cipher(name, key, iv);
+};
+
+polarssl.createDecipher = function createDecipher(name, key, iv) {
+  return new polarssl.Decipher(name, key, iv);
 };
 
 polarssl.createHash = function createHash(name) {
