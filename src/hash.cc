@@ -139,7 +139,9 @@ NAN_METHOD(PolarSSL::Hash::Digest) {
 
   char err[1024];
 
-  int rc = md_finish(&(hash->md_ctx), hash->sum);
+  unsigned char sum[POLARSSL_MD_MAX_SIZE];
+
+  int rc = md_finish(&(hash->md_ctx), sum);
 
   if (rc != 0) {
     polarssl_strerror(rc, err, sizeof(err));
@@ -147,7 +149,7 @@ NAN_METHOD(PolarSSL::Hash::Digest) {
     NanReturnUndefined();
   }
 
-  NanReturnValue(NanNewBufferHandle(reinterpret_cast<char*>(hash->sum), hash->md_info->size));
+  NanReturnValue(NanNewBufferHandle(reinterpret_cast<char*>(sum), hash->md_info->size));
 }
 
 NAN_METHOD(PolarSSL::Hash::DigestAsync) {
@@ -164,7 +166,7 @@ NAN_METHOD(PolarSSL::Hash::DigestAsync) {
 void PolarSSL::HashDigestWorker::Execute() {
   // char err[1024];
 
-  int rc = md_finish(&(hash->md_ctx), hash->sum);
+  int rc = md_finish(&(hash->md_ctx), sum);
 
   if (rc != 0) {
     // polarssl_strerror(rc, err, sizeof(err));
@@ -177,7 +179,7 @@ void PolarSSL::HashDigestWorker::HandleOKCallback() {
 
   v8::Local<v8::Value> argv[] = {
     v8::Local<v8::Value>::New(v8::Null()),
-    NanNewBufferHandle(reinterpret_cast<char*>(hash->sum), hash->md_info->size),
+    NanNewBufferHandle(reinterpret_cast<char*>(sum), hash->md_info->size),
   };
 
   callback->Call(2, argv);

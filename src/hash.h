@@ -13,7 +13,6 @@ namespace PolarSSL {
 
     const md_info_t* md_info;
     md_context_t md_ctx;
-    unsigned char sum[POLARSSL_MD_MAX_SIZE];
 
   private:
     Hash() : errstr(NULL) {}
@@ -50,6 +49,7 @@ namespace PolarSSL {
     void HandleOKCallback();
   private:
     Hash* hash;
+    unsigned char sum[POLARSSL_MD_MAX_SIZE];
   };
 };
 
