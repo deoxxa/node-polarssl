@@ -4,6 +4,11 @@ node-polarssl
 Node.JS bindings for [PolarSSL](https://polarssl.org/), a clean, lightweight
 crypto library.
 
+RIDE THE POWER
+--------------
+
+![](https://i.imgur.com/YyicrOW.jpg)
+
 Overview
 --------
 
