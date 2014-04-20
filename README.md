@@ -36,7 +36,7 @@ whole story.
 ### polarssl.createCipher
 
 ```js
-var hash = polarssl.createCipher("ARC4-128", key=Buffer("..."), iv=Buffer("..."), mode=0);
+var cipher = polarssl.createCipher("ARC4-128", key=Buffer("..."), iv=Buffer("..."));
 ```
 
 ### polarssl.Cipher
@@ -73,6 +73,54 @@ var data = cipher.final();
 
 ```js
 cipher.finalAsync(function(err, data) {
+  if (err) {
+    return console.warn(err);
+  }
+
+  console.log(data);
+});
+```
+
+### polarssl.createDecipher
+
+```js
+var decipher = polarssl.createDecipher("ARC4-128", key=Buffer("..."), iv=Buffer("..."));
+```
+
+### polarssl.Decipher
+
+This is a duplex stream - write ciphertext in, get cleartext out.
+
+```js
+var decipher = new polarssl.Decipher("md5");
+```
+
+### polarssl.Decipher.update
+
+```js
+decipher.update(Buffer("this is some data"));
+```
+
+### polarssl.Decipher.updateAsync
+
+```js
+decipher.updateAsync(Buffer("this is some data"), function(err) {
+  if (err) {
+    return console.warn(err);
+  }
+});
+```
+
+### polarssl.Decipher.final
+
+```js
+var data = decipher.final();
+```
+
+### polarssl.Decipher.finalAsync
+
+```js
+decipher.finalAsync(function(err, data) {
   if (err) {
     return console.warn(err);
   }
