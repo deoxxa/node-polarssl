@@ -26,6 +26,10 @@ namespace PolarSSL {
     static NAN_METHOD(Final);
     static NAN_METHOD(FinalAsync);
     static NAN_METHOD(GetCiphers);
+    static NAN_GETTER(GetName);
+    static NAN_GETTER(GetKeySize);
+    static NAN_GETTER(GetIVSize);
+    static NAN_GETTER(GetBlockSize);
 
     const char* errstr;
   };

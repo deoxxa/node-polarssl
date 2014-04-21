@@ -48,6 +48,11 @@ void PolarSSL::Cipher::Init(v8::Handle<v8::Object> target) {
   constructorTemplate->PrototypeTemplate()->Set(v8::String::NewSymbol("final"), v8::FunctionTemplate::New(Final)->GetFunction());
   constructorTemplate->PrototypeTemplate()->Set(v8::String::NewSymbol("finalAsync"), v8::FunctionTemplate::New(FinalAsync)->GetFunction());
 
+  constructorTemplate->PrototypeTemplate()->SetAccessor(NanSymbol("name"), GetName);
+  constructorTemplate->PrototypeTemplate()->SetAccessor(NanSymbol("keySize"), GetKeySize);
+  constructorTemplate->PrototypeTemplate()->SetAccessor(NanSymbol("ivSize"), GetIVSize);
+  constructorTemplate->PrototypeTemplate()->SetAccessor(NanSymbol("blockSize"), GetBlockSize);
+
   v8::Persistent<v8::Function> constructor = v8::Persistent<v8::Function>::New(constructorTemplate->GetFunction());
 
   target->Set(v8::String::NewSymbol("Cipher"), constructor);
@@ -252,6 +257,54 @@ void PolarSSL::CipherFinalWorker::HandleErrorCallback() {
   delete[] output;
 
   callback->Call(1, argv);
+}
+
+NAN_GETTER(PolarSSL::Cipher::GetName) {
+  NanScope();
+
+  PolarSSL::Cipher* cipher = node::ObjectWrap::Unwrap<PolarSSL::Cipher>(args.This());
+
+  const char* name = cipher_get_name(&(cipher->cipher_ctx));
+
+  if (name == NULL) {
+    NanReturnUndefined();
+  }
+
+  NanReturnValue(v8::String::New(name));
+}
+
+NAN_GETTER(PolarSSL::Cipher::GetKeySize) {
+  NanScope();
+
+  PolarSSL::Cipher* cipher = node::ObjectWrap::Unwrap<PolarSSL::Cipher>(args.This());
+
+  int size = cipher_get_key_size(&(cipher->cipher_ctx));
+
+  if (size == POLARSSL_KEY_LENGTH_NONE) {
+    NanReturnUndefined();
+  }
+
+  NanReturnValue(v8::Number::New(size / 8));
+}
+
+NAN_GETTER(PolarSSL::Cipher::GetIVSize) {
+  NanScope();
+
+  PolarSSL::Cipher* cipher = node::ObjectWrap::Unwrap<PolarSSL::Cipher>(args.This());
+
+  int size = cipher_get_iv_size(&(cipher->cipher_ctx));
+
+  NanReturnValue(v8::Number::New(size));
+}
+
+NAN_GETTER(PolarSSL::Cipher::GetBlockSize) {
+  NanScope();
+
+  PolarSSL::Cipher* cipher = node::ObjectWrap::Unwrap<PolarSSL::Cipher>(args.This());
+
+  unsigned int size = cipher_get_block_size(&(cipher->cipher_ctx));
+
+  NanReturnValue(v8::Number::New(size));
 }
 
 NAN_METHOD(PolarSSL::Cipher::GetCiphers) {
