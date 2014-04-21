@@ -40,7 +40,6 @@ namespace PolarSSL {
     ~CipherUpdateWorker() {}
     void Execute();
     void HandleOKCallback();
-    void HandleErrorCallback();
   private:
     Cipher* cipher;
     int rc;
@@ -56,7 +55,6 @@ namespace PolarSSL {
     ~CipherFinalWorker() {}
     void Execute();
     void HandleOKCallback();
-    void HandleErrorCallback();
   private:
     Cipher* cipher;
     int rc;

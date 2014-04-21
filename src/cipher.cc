@@ -147,7 +147,9 @@ void PolarSSL::CipherUpdateWorker::Execute() {
   rc = cipher_update(&(cipher->cipher_ctx), reinterpret_cast<const unsigned char*>(input), input_length, reinterpret_cast<unsigned char*>(output), &output_length);
 
   if (rc != 0) {
-    errmsg = "error updating cipher context with data";
+    errmsg = new char[1024];
+    polarssl_strerror(rc, const_cast<char*>(errmsg), 1024);
+    delete[] output;
   }
 
   delete[] input;
@@ -164,23 +166,6 @@ void PolarSSL::CipherUpdateWorker::HandleOKCallback() {
   delete[] output;
 
   callback->Call(2, argv);
-}
-
-void PolarSSL::CipherUpdateWorker::HandleErrorCallback() {
-  NanScope();
-
-  char err[1024];
-
-  polarssl_strerror(rc, err, sizeof(err));
-  NanThrowError(err);
-
-  v8::Local<v8::Value> argv[] = {
-    v8::Local<v8::Value>::New(NanError(err)),
-  };
-
-  delete[] output;
-
-  callback->Call(1, argv);
 }
 
 NAN_METHOD(PolarSSL::Cipher::Final) {
@@ -225,7 +210,9 @@ void PolarSSL::CipherFinalWorker::Execute() {
   rc = cipher_finish(&(cipher->cipher_ctx), reinterpret_cast<unsigned char*>(output), &output_length);
 
   if (rc != 0) {
-    errmsg = "error updating cipher context with data";
+    errmsg = new char[1024];
+    polarssl_strerror(rc, const_cast<char*>(errmsg), 1024);
+    delete[] output;
   }
 }
 
@@ -240,23 +227,6 @@ void PolarSSL::CipherFinalWorker::HandleOKCallback() {
   delete[] output;
 
   callback->Call(2, argv);
-}
-
-void PolarSSL::CipherFinalWorker::HandleErrorCallback() {
-  NanScope();
-
-  char err[1024];
-
-  polarssl_strerror(rc, err, sizeof(err));
-  NanThrowError(err);
-
-  v8::Local<v8::Value> argv[] = {
-    v8::Local<v8::Value>::New(NanError(err)),
-  };
-
-  delete[] output;
-
-  callback->Call(1, argv);
 }
 
 NAN_GETTER(PolarSSL::Cipher::GetName) {
